@@ -1,0 +1,458 @@
+---
+title: ""
+output: 
+  html_document: 
+    df_print: paged
+    code_folding: hide
+---
+
+```{r, include = FALSE}
+library(readxl)
+df <- read_excel(here::here("online_retail_II.xlsx"))
+library(dplyr)
+df <- df %>%
+  mutate(CustomerID = as.character(`Customer ID`), .keep = "unused", .after = Price)
+library(stringr)
+df <- df %>%
+  filter(str_length(StockCode) == 5 |
+           str_detect(StockCode, "^\\d{5}[a-zA-Z]{1,2}$") |
+           str_detect(StockCode, "PADS|DCGS|SP|gift")) %>%
+  filter(Price != 0) %>% #VEDERE SE QUESTA POSSO UNIRLA, RIGUARDARE ANCHE LA PARTE SU my dplyr handbook PER VEDERE SE E' CHIARA ABBASTANZA
+  mutate(Country = na_if(Country, "Unspecified"), .keep = "unused", .after = Price)
+```
+
+We will continue here in the same vein as in the previous document, focusing this time on the `Price` column, whose values have this distribution.
+
+```{r}
+tibble("Statistic" = c("Min." , "1st Qu.", "Median", "Mean", "3rd Qu.", "Max.")) %>%
+  bind_cols(df %>%
+              reframe(Price = summary(Price)))
+```
+
+<br>
+
+# - *preliminary inspection*
+
+We will here inspect the higher
+
+```{r}
+df %>%
+  arrange(desc(Price))
+```
+
+and lower values of the column, to see if we spot some bizarre entries.
+
+```{r}
+df %>%
+  arrange(Price)
+```
+
+From the most expensive purchases, the item FLAG OF ST GEORGE CAR FLAG seems to have a high variability in price, with 0.42 £ being the standard one but we can also encounter values that reach 1157.15 £.
+
+```{r}
+df %>%
+  filter(StockCode == "84016")
+```
+
+These high values are somehow concentrated in the middle of the year.
+
+```{r}
+library(ggplot2)
+df %>%
+  filter(StockCode == "84016") %>%
+  ggplot(aes(InvoiceDate, Price)) +
+  geom_point()
+```
+
+And, interestingly enough, they are not associated to any CustomerID, while the lower ones, except one case, are.
+
+```{r}
+df %>%
+  filter(StockCode == "84016") %>%
+  count(Price, CustomerID, name = "Number of Occurrences") %>%
+  arrange(desc(Price))
+```
+
+They don't seem typos, but transactions we don't have enough information about.
+As their presence doesn't modify the values of the upper and lower bounds returned by the formulas, we will not remove them, but it is important that we are aware of their existence going forward.
+
+But we will still eliminate the rows of cancelled invoices, even if they also don't change the values of the bounds, as their substantial number can modify many percentages, plus, as we discussed in the previous document, we find more correct to consider cancelled invoices as they never existed for the goals of this analysis.
+
+<br>
+
+# - *upper outliers*
+
+The number returned by the formula is then 8.65 £, 
+
+```{r}
+df_outlier <- df %>%
+  filter(Quantity >= 0)
+`Price Upper Bound` <- unname(quantile(df_outlier$Price, probs = 0.75) + 1.5 * (quantile(df_outlier$Price, probs = 0.75) - quantile(df_outlier$Price, probs = 0.25)))
+library(knitr)
+kable(tibble(`Price Upper Bound`), align = "l")
+```
+
+so, mirroring the analysis we did for the `Quantity` column, we can start by evaluating how many purchases reached higher prices.
+
+```{r}
+df_outlier %>%
+  mutate("Upper Outlier" = if_else(Price > `Price Upper Bound`, TRUE, FALSE)) %>%
+  summarise("Total Number of Purchases" = n(),
+            "Number of Upper Outliers Purchases" = sum(`Upper Outlier`),
+            "Percentage of Upper Outliers Purchases" = formattable::percent(mean(`Upper Outlier`)))
+```
+
+We continue then with this table of items sorted by the most commonly highly priced.
+
+```{r}
+df_outlier %>%
+  mutate("Upper Outlier" = if_else(Price > `Price Upper Bound`, TRUE, FALSE)) %>%
+  group_by(StockCode, Description) %>%
+  summarise("Median Price" = round(median(Price), 0),
+            "Median Quantity" = round(median(Quantity), 2),
+            "Number of Purchases" = n(),
+            "Number of Upper Outliers Purchases" = sum(`Upper Outlier`),
+            "Percentage of Upper Outliers" = formattable::percent(mean(`Upper Outlier`)), .groups = "drop") %>%
+  arrange(desc(`Percentage of Upper Outliers`))
+```
+
+From that we develop the intuition that highly priced items are sold in small quantities, and that is true.
+
+```{r}
+df_outlier %>%
+  mutate("Upper Outlier" = if_else(Price > `Price Upper Bound`, TRUE, FALSE)) %>%
+  group_by(StockCode, Description) %>%
+  mutate("Percentage of Upper Outliers" = mean(`Upper Outlier`),
+         "100% Upper Outlier" = if_else(`Percentage of Upper Outliers` == 1, TRUE, FALSE)) %>%
+  ungroup() %>%
+  count(`100% Upper Outlier`, wt = round(median(Quantity), 2), name = "Median Quantity")
+```
+
+Let's show now the distribution of percentages of upper outliers, first with a table
+
+```{r}
+df_outlier %>%
+  mutate("Upper Outlier" = if_else(Price > `Price Upper Bound`, TRUE, FALSE)) %>%
+  group_by(StockCode, Description) %>%
+  summarise("Percentage of Upper Outliers" = formattable::percent(mean(`Upper Outlier`)), .groups = "drop") %>%
+  count(`Percentage of Upper Outliers`, name = "Number of Items", sort = TRUE) %>%
+  mutate("Percentage of Items" = formattable::percent(`Number of Items` / sum(`Number of Items`)))
+```
+
+and then with a graph
+
+```{r}
+df_outlier %>%
+  mutate("Upper Outlier" = if_else(Price > `Price Upper Bound`, TRUE, FALSE)) %>%
+  group_by(StockCode, Description) %>%
+  summarise("Percentage of Upper Outliers" = mean(`Upper Outlier`), .groups = "drop") %>%
+  #count(`Percentage of Upper Outliers`, name = "Number of Items", sort = TRUE) %>% #PROVARE A FARLO SENZA count() E CON geom_bar()
+  ggplot(aes(`Percentage of Upper Outliers`)) +
+  geom_histogram(bins = 100) # QUI POI DEVO CAMBIARE LA SCALA E METTERE LE PERCENTUALI
+```
+
+We can then analogously proceed to determine if there are some days where the purchase of highly priced item is more common.
+
+```{r}
+df_outlier %>%
+  mutate("Upper Outlier" = if_else(Price > `Price Upper Bound`, TRUE, FALSE)) %>%
+  group_by(InvoiceDay = as.Date(InvoiceDate)) %>%
+  summarise("Median Price" = round(median(Price), 0),
+            "Number of Purchases" = n(),
+            "Number of Upper Outliers Purchases" = sum(`Upper Outlier`),
+            "Percentage of Upper Outliers" = formattable::percent(mean(`Upper Outlier`))) %>%
+  arrange(desc(`Percentage of Upper Outliers`))
+```
+
+Now with a graph, to better show that they happen more frequently before the Christmas break.
+
+```{r}
+df_outlier %>%
+  mutate("Upper Outlier" = if_else(Price > `Price Upper Bound`, TRUE, FALSE)) %>%
+  group_by(InvoiceDay = as.Date(InvoiceDate)) %>%
+  summarise("Percentage of High Outliers" = formattable::percent(mean(`Upper Outlier`))) %>%
+  ggplot(aes(InvoiceDay, `Percentage of High Outliers`)) +
+  geom_col()
+```
+
+But it is also possible that items are priced higher before Christmas,
+
+```{r}
+df_outlier %>%
+  mutate(Christmas = if_else(as.Date(InvoiceDate) < "2009-12-22", "Median Price Before Christmas", "Median Price Following Christmas")) %>%
+  group_by(StockCode, Description, Christmas) %>%
+  summarise(`Median Price` = median(Price), .groups = "drop") %>% 
+  tidyr::pivot_wider(names_from = Christmas, values_from = `Median Price`) %>%
+  mutate(`More Expensive before Christmas?` = if_else(`Median Price Before Christmas` > `Median Price Following Christmas`, "Yes", "No"))
+```
+
+and that is true for 796 stock codes out of 4237. (so for the other 2099 it means that before Christmas purchases of higher prices are more common RIFLETTERE SU QUESTA PARTE)
+
+```{r}
+df_outlier %>%
+  mutate(Christmas = if_else(as.Date(InvoiceDate) < "2009-12-22", "Before Christmas", "Following Christmas")) %>%
+  group_by(StockCode, Christmas) %>%
+  summarise(`Median Price` = median(Price), .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = Christmas, values_from = `Median Price`) %>%
+  mutate(`More Expensive before Christmas?` = if_else(`Before Christmas` > `Following Christmas`, "Yes", "No")) %>% #794
+  count(`More Expensive before Christmas?`)
+```
+
+We can now move to customers, to identify the ones that buys highly priced items more often,
+
+```{r}
+df_outlier %>%
+  mutate("Upper Outlier" = if_else(Price > `Price Upper Bound`, TRUE, FALSE)) %>%
+  group_by(CustomerID) %>%
+  summarise("Median Price" = round(median(Price), 0),
+            "Number of Purchases" = n(),
+            "Number of Upper Outliers Purchases" = sum(`Upper Outlier`),
+            "Percentage of Upper Outliers" = formattable::percent(mean(`Upper Outlier`))) %>%
+  arrange(desc(`Percentage of Upper Outliers`), desc(`Number of Purchases`))
+```
+
+and how many of them there are for every percentage, both as a table
+
+```{r}
+df %>%
+  mutate("Upper Outliers" = if_else(Price > `Price Upper Bound`, TRUE, FALSE)) %>%
+  group_by(CustomerID) %>%
+  summarise("Percentage of Upper Outliers" = formattable::percent(mean(`Upper Outliers`))) %>%
+  count(`Percentage of Upper Outliers`, name = "Number of Customers", sort = TRUE) %>%
+  mutate("Percentage of Customers" = formattable::percent(`Number of Customers` / sum(`Number of Customers`)))
+```
+
+and as a graph.
+
+```{r}
+df_outlier %>%
+  mutate("Upper Outliers" = if_else(Price > `Price Upper Bound`, TRUE, FALSE)) %>%
+  group_by(CustomerID) %>%
+  summarise("Percentage of Upper Outliers" = mean(`Upper Outliers`)) %>%
+  ggplot(aes(`Percentage of Upper Outliers`)) +
+  geom_histogram(bins = 100)
+```
+
+Lastly, we can investigate the countries, but we didn't find any that mainly buys highly priced items.
+
+```{r}
+df %>%
+  mutate("Upper Outlier" = if_else(Price > `Price Upper Bound`, TRUE, FALSE)) %>%
+  group_by(Country) %>%
+  summarise("Number of Purchases" = n(),
+            "Number of Upper Outliers Purchases" = sum(`Upper Outlier`),
+            "Percentage of Upper Outliers" = formattable::percent(mean(`Upper Outlier`))) %>%
+  arrange(desc(`Percentage of Upper Outliers`))
+```
+
+
+QUESTO DA ANALISI VECCHIA, CONTROLLARE I RISULTATI E IL CODICE PER OTTENERLI
+Another line of investigation can be to see if the outliers in Price are more associated to certain clients or countries.
+
+```{r}
+df_outlier %>%
+  mutate(outlier = if_else(Price > `Price Upper Bound`, TRUE, FALSE)) %>%
+  count(CustomerID, outlier, name = "n_stockcodes") %>%
+  group_by(CustomerID) %>%
+  mutate(perc_outliers = formattable::percent(n_stockcodes / sum(n_stockcodes))) %>%
+  filter(outlier == TRUE) %>%
+  select(-outlier) %>%
+  arrange(desc(perc_outliers))
+df_outlier %>%
+  mutate(outlier = if_else(Price > `Price Upper Bound`, TRUE, FALSE)) %>%
+  count(Country, outlier, name = "n_stockcodes") %>%
+  group_by(Country) %>%
+  mutate(perc_outliers = formattable::percent(n_stockcodes / sum(n_stockcodes))) %>%
+  filter(outlier == TRUE) %>%
+  select(-outlier) %>%
+  arrange(desc(perc_outliers))
+```
+
+For the customers, we can see that there are some that just bought few stockcodes but all of them were high priced while for the countries these kinds of transactions are more distributed.
+
+# - *lower outliers*
+
+As for the lower outliers, as their bound is a negative number,
+
+```{r}
+`Price Lower Bound` <- unname(quantile(df_outlier$Price, probs = 0.25) - 1.5 * (quantile(df_outlier$Price, probs = 0.75) - quantile(df_outlier$Price, probs = 0.25)))
+kable(tibble(`Price Lower Bound`), align = "l")
+```
+
+we picked an arbitrary value of 
+
+QUI DEVO DECIDERE UN VALORE, COMINCIO CON first quartile
+
+```{r}
+df_outlier %>%
+  ggplot(aes(Price)) +
+  geom_boxplot() +
+  scale_x_log10()
+summary(df_outlier$Price)
+```
+
+Let's proceed then as we did with the upper outliers, first looking at how many of these low priced purchases there are.
+
+```{r}
+df_outlier %>%
+  mutate("Low Priced" = if_else(Price < 1.25, TRUE, FALSE)) %>%
+  summarise("Total Number of Purchases" = n(),
+            "Total Number of Low Priced Purchases" = sum(`Low Priced`),
+            "Percentage of Low Priced Purchases" = formattable::percent(mean(`Low Priced`)))
+```
+
+And then what items are most commonly sold at these prices.
+
+```{r}
+df_outlier %>%
+  mutate("Low Priced" = if_else(Price < 1.25, TRUE, FALSE)) %>%
+  group_by(StockCode, Description) %>%
+  summarise("Median Price" = round(median(Price), 2),
+            "Median Quantity" = round(median(Quantity), 0),
+            "Number of Purchases" = n(),
+            "Number of Low Priced Purchases" = sum(`Low Priced`),
+            "Percentage of Low Priced Purchases" = formattable::percent(mean(`Low Priced`)), .groups = "drop") %>%
+  arrange(desc(`Percentage of Low Priced Purchases`))
+```
+
+As before, their median quantity is different from the other items, this time being higher.
+
+```{r}
+df_outlier %>%
+  mutate("Low Priced" = if_else(Price < 1.25, TRUE, FALSE)) %>%
+  group_by(StockCode, Description) %>%
+  mutate("Percentage of Low Priced Purchases" = formattable::percent(mean(`Low Priced`)),
+         "100% Low Priced Purchase" = if_else(`Percentage of Low Priced Purchases` == 1, TRUE, FALSE)) %>%
+  ungroup() %>%
+  count(`100% Low Priced Purchase`, wt = round(median(Quantity), 2), name = "Median Quantity")
+```
+
+About the prices, the distribution of them for a single item purchase is not different from the others.
+COME SOPRA, VEDERE SE TENERLO QUESTO (questo l'ho copiato da Quantity, magari qui non vale)
+
+```{r}
+df_outlier %>%
+  mutate("Low Priced" = if_else(Price < 1.25, TRUE, FALSE)) %>%
+  ggplot(aes(`Low Priced`, Price)) + 
+  geom_boxplot()
+```
+
+The distribution is peculiar as well, with two values that stand above the others.
+
+```{r}
+df_outlier %>%
+  mutate("Low Priced" = if_else(Price < 1.25, TRUE, FALSE)) %>%
+  group_by(StockCode, Description) %>%
+  summarise("Percentage of Low Priced Purchases" = formattable::percent(mean(`Low Priced`)), .groups = "drop") %>%
+  count(`Percentage of Low Priced Purchases`, name = "Number of Items", sort = TRUE) %>%
+  mutate("Percentage of Items" = formattable::percent(`Number of Items` / sum(`Number of Items`)))
+df_outlier %>%
+  mutate("Low Priced" = if_else(Price < 1.25, TRUE, FALSE)) %>%
+  group_by(StockCode, Description) %>%
+  summarise("Percentage of Low Priced Purchases" = formattable::percent(mean(`Low Priced`)), .groups = "drop") %>%
+  ggplot(aes(`Percentage of Low Priced Purchases`)) +
+  geom_histogram(bins = 100) # QUI POI DEVO CAMBIARE LA SCALA E METTERE LE PERCENTUALI
+```
+
+On a temporal scale, it seems that low priced items are bought evenly during the year, without any particular spike. CAMBIARE LE SCALE QUI, ANCHE IN QUELLO PRIMA
+
+```{r}
+df_outlier %>%
+  mutate("Low Priced" = if_else(Price < 1.25, TRUE, FALSE)) %>%
+  group_by(InvoiceDay = as.Date(InvoiceDate)) %>%
+  summarise("Median Price" = round(median(Price), 2),
+            "Number of Purchases" = n(),
+            "Number of Low Priced Purchases" = sum(`Low Priced`),
+            "Percentage of Low Priced Purchases" = formattable::percent(mean(`Low Priced`))) %>%
+  arrange(desc(`Percentage of Low Priced Purchases`))
+df_outlier %>%
+  mutate("Low Priced" = if_else(Price < 1.25, TRUE, FALSE)) %>%
+  group_by(InvoiceDay = as.Date(InvoiceDate)) %>%
+  summarise("Percentage of Low Priced Purchases" = formattable::percent(mean(`Low Priced`))) %>%
+  ggplot(aes(InvoiceDay, `Percentage of Low Priced Purchases`)) +
+  geom_col()
+```
+
+About the customers, we can here identify the ones that buy low priced items more often,
+
+```{r}
+df_outlier %>%
+  mutate("Low Priced" = if_else(Price < 1.25, TRUE, FALSE)) %>%
+  group_by(CustomerID) %>%
+  summarise("Median Price" = round(median(Price), 2),
+            "Number of Purchases" = n(),
+            "Number of Low Priced Purchases" = sum(`Low Priced`),
+            "Percentage of Low Priced Purchases" = formattable::percent(mean(`Low Priced`))) %>%
+  arrange(desc(`Percentage of Low Priced Purchases`))
+```
+
+and hereafter show how many of them there are for every percentage of low priced purchases.
+
+```{r}
+df_outlier %>%
+  mutate("Low Priced" = if_else(Price < 1.25, TRUE, FALSE)) %>%
+  group_by(CustomerID) %>%
+  summarise("Percentage of Low Priced Purchases" = formattable::percent(mean(`Low Priced`))) %>%
+  count(`Percentage of Low Priced Purchases`, name = "Number of Customers", sort = TRUE)
+df_outlier %>%
+  mutate("Low Priced" = if_else(Price < 1.25, TRUE, FALSE)) %>%
+  group_by(CustomerID) %>%
+  summarise("Percentage of Low Priced Purchases" = formattable::percent(mean(`Low Priced`))) %>%
+  ggplot(aes(`Percentage of Low Priced Purchases`)) +
+  geom_histogram(bins = 100)
+```
+
+Focusing on the countries, we don't notice any that buys low priced items the majority of times.
+
+```{r}
+df_outlier %>%
+  mutate("Low Priced" = if_else(Price < 1.25, TRUE, FALSE)) %>%
+  group_by(Country) %>%
+  summarise("Number of Purchases" = n(),
+            "Number of Low Priced Purchases" = sum(`Low Priced`),
+            "Percentage of Low Priced Purchases" = formattable::percent(mean(`Low Priced`))) %>%
+  arrange(desc(`Percentage of Low Priced Purchases`))
+```
+
+
+QUESTO E' QUELLO VECCHIO
+
+We can thus decide to investigate the distribution of Price for values inferior to the first quartile (1.25 £), to see if there are some recurring values.
+
+```{r}
+df %>%
+  filter(Price < quantile(df$Price, prob = 0.25)) %>%
+  ggplot(aes(Price)) +
+  geom_histogram(binwidth = 0.1)
+```
+
+With the aid of an histogram, we can see that we have two values (0.4 and 0.8) that occur more often, for how interesting it might be.
+
+Let's see if there are some clients or even countries that buy only low priced items
+
+```{r}
+df_outlier %>%
+  mutate(low_priced = if_else(Price < 1.25, TRUE, FALSE)) %>%
+  count(CustomerID, low_priced, name = "n_stockcodes") %>%
+  group_by(CustomerID) %>%
+  mutate(perc_low_priced = formattable::percent(n_stockcodes / sum(n_stockcodes))) %>%
+  filter(low_priced == TRUE) %>%
+  select(-low_priced) %>%
+  arrange(desc(perc_low_priced))
+df_outlier %>%
+  mutate(low_priced = if_else(Price < 1.25, TRUE, FALSE)) %>%
+  count(Country, low_priced, name = "n_stockcodes") %>%
+  group_by(Country) %>%
+  mutate(perc_low_priced = formattable::percent(n_stockcodes / sum(n_stockcodes))) %>%
+  filter(low_priced == TRUE) %>%
+  select(-low_priced) %>%
+  arrange(desc(perc_low_priced))
+```
+
+# - *actions performed*
+
+we didn't remove flag of st george because it didn't modify the values of the bounds plus it never appeared in the tables we produced CONTROLLARE QUESTO
+
+# - *main takeaways*
+
+As we did with the `Quantity` column, we built an understanding of the most common occurrences for both the highly and low priced purchases, returning many tables that can be used to direct business decisions, but we didn't discover any very peculiar instances worth investigating further.

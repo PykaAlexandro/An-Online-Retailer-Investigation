@@ -1,0 +1,133 @@
+---
+title: ""
+output: 
+  html_document: 
+    df_print: paged
+    code_folding: hide
+---
+
+```{r, include = FALSE}
+library(readxl)
+df <- read_excel(here::here("online_retail_II.xlsx"))
+library(dplyr)
+df <- df %>%
+  mutate(CustomerID = as.character(`Customer ID`), .keep = "unused", .after = Price)
+library(stringr)
+df <- df %>%
+  filter(str_length(StockCode) == 5 |
+           str_detect(StockCode, "^\\d{5}[a-zA-Z]{1,2}$") |
+           str_detect(StockCode, "PADS|DCGS|SP|gift")) %>%
+  filter(Price != 0) %>% #VEDERE SE QUESTA POSSO UNIRLA, RIGUARDARE ANCHE LA PARTE SU my dplyr handbook PER VEDERE SE E' CHIARA ABBASTANZA
+  mutate(Country = na_if(Country, "Unspecified"), .keep = "unused", .after = Price)
+df <- df %>%
+  filter(!is.na(CustomerID))
+```
+
+DIREI CHE QUI CI SONO TROPPI DISTINGUO DA FARE, E LE TAVOLE MONTHLY EXPENSES AND INVOICE POSSONO BASTARE
+
+# - *days between purchases / frequency of purchases*
+
+AGGIUNGERE VARIANZA PER QUANTIFICARE LA COSTANZA DEGLI ORDINI, SI', LA VARIABILITA' PUO' ESSERE UN PROBLEMA, TIPO PER 17426 CHE NON ORDINA REGOLARMENTE
+
+Let’s try to quantify the dynamism by the days that occur between each Invoice, both for their total number and for the not cancelled ones, and adding as well a column with the percentage of not cancelled invoices for every customer. 
+DEVO METTERE _notC, E NON _C, SENNO’ HO 2718 Inf (I CLIENTI CHE NON HANNO MAI CANCELLATO) E NON SOLO 25 (I CLIENTI CHE HANNO SOLO CANCELLATO), 
+
+E’ ANCHE PIU’ SENSATO PER days_between POSSO CALCOLARLO DIVERSAMENTE?
+POSSO PROVARE COSI' MA CI DEVO LAVORARE SU'
+
+```{r}
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  filter(CustomerID == "14911") %>%
+  print() %>%
+  group_by(CustomerID, Country, Invoice) %>%
+  summarise(Day_of_Invoice = first(InvoiceDate), .groups = "drop_last") %>%
+  arrange(Day_of_Invoice) %>%
+  print() %>%
+  reframe(Days_Between_Invoices = Day_of_Invoice - lag(Day_of_Invoice)) %>%
+  print() %>%
+  group_by(CustomerID) %>%
+  summarise(Median = median(Days_Between_Invoices, na.rm = TRUE), #FORSE E' MEGLIO USARE LA MEDIA VISTO CHE C'E' MOLTA VARIANZA? PER TENERE CONTO DI LUNGHI TEMPI TRA GLI ACQUISTI?
+            `Median Absolute Deviation` = mad(Days_Between_Invoices, na.rm = TRUE)) #FACCIO LA CONVERSIONE PRIMA O DOPO AVER CALCOLATO?
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  filter(CustomerID == "14911") %>%
+  group_by(CustomerID, Country, Invoice) %>%
+  summarise(Day_of_Invoice = first(InvoiceDate), .groups = "drop_last") %>%
+  arrange(Day_of_Invoice) %>%
+  reframe(Days_Between_Invoices = Day_of_Invoice - lag(Day_of_Invoice)) %>%
+  group_by(CustomerID) %>%
+  summarise(Mean = mean(Days_Between_Invoices, na.rm = TRUE) / (60 * 24), #FORSE E' MEGLIO USARE LA MEDIA VISTO CHE C'E' MOLTA VARIANZA? PER TENERE CONTO DI LUNGHI TEMPI TRA GLI ACQUISTI?
+            `Standard Deviation` = sd(Days_Between_Invoices, na.rm = TRUE))
+```
+
+
+```{r}
+df %>%
+  filter(CustomerID == "15560") #due ordini distanziati da un minuto
+```
+
+QUI DEVO RIFLETTERE SULLA CHIUSURA NEI GIORNI LAVORATIVI (DALLA PRIMA ANALISI SEMBRA CHE NON CHIUDAN MAI)
+CI SONO LE CHIUSURE PER LE FESTE E NEI SABATI, MA RIGUARDANO TUTTI I CLIENTI (MA NON GLI ITEM STAGIONALI) QUINDI BASTA CHE NE FACCIO MENZIONE NELL'INTRODUZIONE
+OPPURE POTREI SEGMENTARE ANCHE PER I MESI IN MODO DA TENER CONTO DELLA STAGIONALITA'
+
+```{r}
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  group_by(CustomerID, Country, Invoice) %>%
+  summarise(Day_of_Invoice = first(InvoiceDate), .groups = "drop_last") %>%
+  arrange(Day_of_Invoice) %>%
+  reframe(Days_Between_Invoices = Day_of_Invoice - lag(Day_of_Invoice)) %>%
+  group_by(CustomerID) %>%
+  summarise(`Number of Invoices` = n(),
+            Mean = mean(Days_Between_Invoices, na.rm = TRUE) / (60 * 24),
+            `Standard Deviation` = sd(Days_Between_Invoices, na.rm = TRUE)) %>%
+  filter(`Number of Invoices` > 12) %>%
+  arrange(Mean)
+library(ggplot2)
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  group_by(CustomerID, Country, Invoice) %>%
+  summarise(Day_of_Invoice = first(InvoiceDate), .groups = "drop_last") %>%
+  arrange(Day_of_Invoice) %>%
+  reframe(Days_Between_Invoices = Day_of_Invoice - lag(Day_of_Invoice)) %>%
+  group_by(CustomerID) %>%
+  summarise(Mean = mean(Days_Between_Invoices, na.rm = TRUE)) %>%
+  print() %>%
+  ggplot(aes(Mean)) +
+  geom_histogram()
+```
+
+
+```{r}
+n_days <- last(df$InvoiceDate) - first(df$InvoiceDate)
+df %>%
+  group_by(CustomerID, Country) %>%
+  summarise(N_Invoices = n_distinct(Invoice),
+            N_Invoices_notC = n_distinct(Invoice[Quantity > 0])) %>%
+  mutate(perc_notC = formattable::percent(N_Invoices_notC / N_Invoices),
+         days_between = round(n_days / N_Invoices, 1), 
+         days_between_notC = round(n_days / N_Invoices_notC, 1)) %>%
+  arrange(desc(N_Invoices))
+```
+
+We complement the table with a graph to better show how, starting from the right, there is a bulk of customers that buys once a year, another one that buys twice a year and a final group that buys several times a year, with different frequencies where the most common is one invoice, finalized or not, every one to two months.
+NEL CALCOLO DEI days CI SONO DEGLI INFINITO PER n_days / N_Invoice_notC  QUANDO IL DENOMINATORE E' O 
+
+```{r}
+library(ggplot2)
+df %>%
+  group_by(CustomerID, Country) %>%
+  summarise(N_Invoices = n_distinct(Invoice),
+            N_Invoices_notC = n_distinct(Invoice[Quantity > 0])) %>%
+  mutate(perc_notC = formattable::percent(N_Invoices_notC / N_Invoices),
+         days_between = round(n_days / N_Invoices, 1), 
+         days_between_notC = round(n_days / N_Invoices_notC, 1)) %>%
+  tidyr::pivot_longer(c("days_between", "days_between_notC"), values_to = "days") %>%
+  ggplot(aes(days, fill = name)) +
+  geom_histogram(binwidth = 30, boundary = 0) +
+  facet_wrap(~ name, nrow = 2) +
+  scale_x_continuous(breaks = scales::breaks_width(30)) +
+  ggthemes::scale_fill_colorblind() +
+  theme(legend.position = "none")
+```

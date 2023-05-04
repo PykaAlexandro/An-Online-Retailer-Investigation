@@ -1,0 +1,165 @@
+---
+title: "disclaimer"
+author: ""
+date: ""
+output: 
+  html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+THIS SITE IS STILL A WORK IN PROGRESS
+
+# - *MOTIVATION*
+
+# - *INTENDED AUDIENCE*
+
+# - *THE DATA FRAME*
+
+# - *SHORTCOMINGS*
+
+spazio tra output del codice e descrizione
+code folding rompe il flusso della lettura (è la stessa cosa di sopra?)
+
+grafici
+
+COSE DA FARE
+Discount come Description
+
+# - *ACKOWNLEDGEMENTS*
+
+shafee stackoverflow
+
+# - *CONTACTS INFORMATION*
+
+# - *FOR THE RECRUITERS*
+
+le industrie che mi piacciono
+voglio vivere al caldo
+
+
+- this blog is for recruiters mostly, to show my skills, my working protocols and my way of thinking, but also for me to cementare concetti and serve as a reference in the future for procedures
+
+Presentation in a working environment, with data and non-data people (opzione per nascondere il codice), but everybody knows the business the database are referring to.
+I won't take anything for granted though and be as clear as possible without be redundant.
+
+3/5 minutes of time required to read (not understand) every single analysis (che devono essere risposte a domande tipo "chi è il cliente che spende di più?/quale transazione é la più voluminosa?". I try to respect the time of my readers.
+300 righe di markdown?
+
+I comment after the code, because I want to highlight it.
+packages caricati prima di usarli
+
+I like to be throughout and to turn every stone
+
+clarity and easy to modify
+
+one information at a time
+
+usare positivi e non negativi (Confirmed is better than not Cancelled)
+
+nell'introduzione di ogni analisi ci metto gli obiettivi (che so usare dplyr ed il cervello per esempio) FORSE
+
+e nel finale un sommario con bullet points
+
+I don't like to remove NAs, cos it seems like "I don't like this data, I will forget it exists"
+
+MODIFICARE I TALLY IN KABLE TOGLIENDO LA VARIABILE
+
+IN DATA WRANGLING PARLARE BENE DI TUTTI I CASI:
+-invoice con C
+-stockcode con lettere
+-stockcode strani
+-tutti i vari tipi di description
+-quantity e price minore di zero (che devono corrispondere a invoice con C)
+-quantity uguale a 0 (che mi sembra siano tipo le storie di Amazone) e i description con NA vengono eliminati da 
+```{r}
+# df %>% 
+#   filter(!is.na(as.integer(StockCode)) & #MANTIENE GLI STOCKCODE TIPO 84899E
+#            Price != 0)
+# # we eliminate rows that are not actual purchases
+# df %>%
+#   filter(!(is.na(as.integer(StockCode)) |
+#                   Price == 0))
+# #E' UGUALE A QUESTO GRAZIE A DE MORGAN'S LAW
+```
+e dopo di questa riga di codice posso usare la moda per sistemare description
+TUTTI LE C INVOICE HANNO QUANTITY NEGATIVE?
+
+qui nel secondo trovo QUantity negative senza la C in invoice
+```{r}
+# df %>%
+#   filter(is.na(as.integer(Invoice))) %>%
+#   print() %>%
+#   count(Invoice)
+# df %>%
+#   group_by(Invoice) %>%
+#   filter(all(Quantity < 0)) %>%
+#   print() %>%
+#   count(Invoice)
+```
+
+
+SAREBBE BELLO FARNE UNO SULL'IMPORTANZA DEL DATA WRANGLING IN CUI SPIEGO COSA SUCCEDE SE NON PULISCO UN DATAFRAME
+
+We can access the first, last and nth element of a column with the position wrappers first(), last() and nth() which are equivalent to x[1], x[length(x)] and x[n] in base R
+FIGO QUESTO, VEDIAMO SE POSSO METTERLO IN UNA ANALISI
+
+```{r}
+# df %>%
+#   group_by(`Customer ID`) %>%
+#   summarise(First_Item = first(Description),
+#             Tenth_Item = nth(Description, 10),
+#             Last_Item = last(Description))
+```
+
+# - *STYLE*
+
+About the site's visual presentation, I kept it simple and clean, also because I didn't nor don't want to spend too much time on it.
+
+A dry exposition
+
+I will use tidyverse (styler and lintr pkg) /google style guide
+
+I load packages before I use the functions in it ans sometimes in code with formattable::
+
+I will try to use tidyverse functions for everything, even when a base R call would have been quicker and more straightforward because a tidyverse pipe can be reused more easily for various scope.
+
+uso scale_x_colordblind per i daltonici
+
+cercare di avere le percentuali tutte uguali (o 0.2 o 20%) formattable sembra figo
+
+prima persona singolare o plurale?
+
+commentare il codice o spiegare tutto nel testo (meglio nel testo per non data people)?
+MEGLIO COMMENTARE OGNI RIGA DI CODICE NEI CHUNKS ANCHE PER CONTROLLARLO
+POI METTO I CHUNKS A SCOMPARSA NEL BLOG
+
+I have not been very consistent with naming new variables as the df uses camelcase (StockCode) while I personally prefer snakecase (perc_missing).
+Sometimes then I used camelcase for consistency with the original df.
+POI USO PIU' SPESSO `Percentage of High Outliers` PER ESEMPIO, DIRE PERCHE'
+
+stile di ggplot2 vediamo se riesco a metter un tema unico
+
+METTERE ungroup() E' BUONA PRATICA DI CODICE? MEGLIO RIMUOVERE I GRUPPI SI
+
+preferisco usare group_by + summarise che count
+meglio usare rowwise() che summarise(..., .groups = "rowise") in modo che ogni riga di codice faccia solo un'azione e cosi' migliora la leggibilità
+
+il blog su dplyr puo' mostrare anche la mia abilità a scrivere documentazioni
+
+i like to observe things and to understand them
+
+che possa essere letto e compreso anche da stanco a fine giornata
+
+# - *SITE NAVIGATION*
+
+poter fare il download delle tavole
+
+per ogni sezione scrivere a chi puo' interessare di piu' (recruiter, executives, data people)
+
+first part about data wrangling
+second part about what I enjoy to do (QUI E' PIU' SU COSA SO FARE CHE A TROVARE RISPOSTE, POCHE COSE SEMPLICI DA CAPIRE VISTO CHE NON SARANNO COSE MOLTO AVANZATE)
+third part about things that interest me and that I want to get better at
+

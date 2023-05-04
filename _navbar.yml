@@ -1,0 +1,39 @@
+name: "disclaimer"
+title: "An Online Retailer Investigation"
+type: inverse
+left:
+  - text: "Introduction & Data Wrangling"
+    menu:
+       - text: "Data Frame Presentation & Basic Checks"
+         href: ./01_An_Introduction_to_the_Data.html
+       - text: "Data Wrangling Part 1 (data cleaning)"
+         href: ./02_Data_Wrangling_Part1_(data_cleaning).html
+       - text: "Data Wrangling Part 2 (missing values & duplicated rows)"
+         href: ./03_Data_Wrangling_Part2_(missing_values_duplicated_rows).html
+       - text: "Data Wrangling Part 3a (outliers for Quantity)"
+         href: ./04_Data_Wrangling_Part3a_(Quantity outliers).html 
+       - text: "Data Wrangling Part 3b (outliers for Price)"
+         href: ./05_Data_Wrangling_Part3b_(Price outliers).html 
+  - text: "Extracting Insights / Answering Questions"
+    menu:
+       - text: "Investigating Invoices"
+         href: ./06_Investigating_Invoices.html
+       - text: "Investigating Items"
+         href: ./07_Investigating_Items.html
+       - text: "Investigating Customers"
+         href: ./08_Investigating_Customers.html
+  # - text: "Grouping operations"
+  #   menu:
+  #      - text: "group_by() / .by"
+  #        href: ./group_by_by.html
+  #      - text: "grouped data frames utility functions"
+  #        href: ./grouped_data_frames_utility_functions.html
+  #      - text: "summarise() & reframe()"
+  #        href: ./summarise_reframe.html
+  #      - text: "count()"
+  #        href: ./count.html
+  #      - text: "tally()"
+  #        href: ./tally.html
+right:
+  - icon: fa-github fa-lg
+    href: https://github.com/githubusername/mywebsite

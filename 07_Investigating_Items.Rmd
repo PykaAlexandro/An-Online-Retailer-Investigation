@@ -1,0 +1,347 @@
+---
+title: ""
+output: 
+  html_document: 
+    df_print: paged
+    code_folding: hide
+---
+
+```{r, include = FALSE}
+library(readxl)
+df <- read_excel(here::here("online_retail_II.xlsx"))
+library(dplyr)
+df <- df %>%
+  mutate(CustomerID = as.character(`Customer ID`), .keep = "unused", .after = Price)
+library(stringr)
+df <- df %>%
+  filter(str_length(StockCode) == 5 |
+           str_detect(StockCode, "^\\d{5}[a-zA-Z]{1,2}$") |
+           str_detect(StockCode, "PADS|DCGS|SP|gift")) %>%
+  filter(Price != 0) %>% #VEDERE SE QUESTA POSSO UNIRLA, RIGUARDARE ANCHE LA PARTE SU my dplyr handbook PER VEDERE SE E' CHIARA ABBASTANZA
+  mutate(Country = na_if(Country, "Unspecified"), .keep = "unused", .after = Price)
+```
+
+NON CI SONO RIGHE DA TOGLIERE?
+After having examined the data from an invoice point of view, we continue here in the same vein but focusing on the items, keeping in mind that we don’t have access to the complete inventory but only to the items that have been invoiced during the time frame present in our data.
+
+<br>
+
+# - *most popular items* 
+
+So let’s start by counting their number and assessing the most popular ones, showing both the total quantities of the confirmed and of the cancelled orders
+
+```{r}
+df %>%
+  count(StockCode, Description, sort = TRUE, name = "Number of Purchases") %>%
+  left_join(df %>%
+              mutate(Status = if_else(str_detect(Invoice, "C"), "Cancelled", "Confirmed")) %>%
+              group_by(StockCode, Description) %>%
+              summarise(`Total Quantity Purchased` = sum(Quantity[Status == "Confirmed"]),
+                        `Total Quantity Cancelled` = sum(Quantity[Status == "Cancelled"]), .groups = "drop"), by = c("StockCode", "Description"))
+```
+
+We might be interested in knowing, for every item, the weekly, confirmed, sales and to compare them to the item's minimum, median and maximum value.
+
+```{r}
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  mutate(`Year / Week` = format(InvoiceDate, "%y/%V")) %>%
+  group_by(StockCode, Description, `Year / Week`) %>%
+  summarise(`Quantity Sold` = sum(Quantity), .groups = "drop") %>%
+  mutate(`Minimum Quantity Sold` = min(`Quantity Sold`),
+         `Median Quantity Sold` = median(`Quantity Sold`),
+         `Maximum Quantity Sold` = max(`Quantity Sold`))
+```
+
+The previous table can also be easily filtered for weeks where the sales were higher or lower a certain value of choice, for example 200.
+
+```{r}
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  mutate(`Year / Week` = format(InvoiceDate, "%y/%V")) %>%
+  group_by(StockCode, Description, `Year / Week`) %>%
+  summarise(`Quantity Sold` = sum(Quantity), .groups = "drop") %>%
+  mutate(`Minimum Quantity Sold` = min(`Quantity Sold`),
+         `Median Quantity Sold` = median(`Quantity Sold`),
+         `Maximum Quantity Sold` = max(`Quantity Sold`)) %>%
+  filter(`Quantity Sold` > 200)
+```
+
+<br>
+
+# - *most expensive items*
+
+Besides the most popular, another thing we are interest into are the most expensive items, that we will rank using their median price, always calculated on only the confirmed purchases.
+
+```{r}
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  group_by(StockCode, Description) %>%
+  summarise(`Median Price` = median(Price),
+            `Number of Purchases` = n(),
+            `Median Quantity per Purchase` = median(Quantity), .groups = "drop") %>%
+  arrange(desc(`Median Price`))
+```
+
+If we segment our inventory on 10 different bins of equal size (of approximately 30 £) we notice that the bin with the cheapest items is the most populated, by a large margin.
+
+```{r}
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  group_by(StockCode, Description) %>%
+  mutate(`Median Price` = median(Price)) %>%
+  group_by(`Price Bins` = cut(`Median Price`, 10), .drop = FALSE) %>%
+  summarise(`Number of Distinct Items` = n_distinct(StockCode),
+            `Number of Purchases` = n())
+library(ggplot2)
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  group_by(StockCode, Description) %>%
+  mutate(`Median Price` = median(Price)) %>%
+  group_by(`Price Bins` = cut(`Median Price`, 10), .drop = FALSE) %>%
+  summarise(`Number of Purchases` = n()) %>%
+  ggplot(aes(`Price Bins`, `Number of Purchases`)) +
+  geom_col()  +
+  scale_y_log10() #UN PO' MISLEADING CON SCALA LOGARITMICA, DEVO SPECIFICARLO SULLA LEGGENDA
+```
+
+We used the median price as the price variability is quite high
+
+```{r}
+df %>%
+  group_by(StockCode, Description) %>%
+  summarise(stdev = sd(Price)) %>%
+  arrange(desc(stdev))
+df %>%
+  filter(StockCode %in% c("22656", "21764")) %>% #QUI DEVO RIPASSARE UN PO' DI STATISTICA, DIREI CHE E' LO Z SCORE LA METRICA DA USARE QUI
+  ggplot(aes(Price, color = StockCode)) +
+  geom_density()
+```
+
+So if we are interested in knowing when an item changed price, we can use this table
+
+```{r}
+df %>%
+  select(InvoiceDate, StockCode, Description, Price) %>%
+  group_by(StockCode) %>%
+  mutate(`Price Change?` = if_else(Price != lag(Price), TRUE, FALSE)) %>%
+  arrange(StockCode)
+```
+
+<br>
+
+# - *most profitable items*
+
+Let’s isolate now our best products in term of revenues, always filtering out the cancelled invoices.
+
+```{r}
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  mutate(Revenue = Quantity * Price) %>%
+  group_by(StockCode, Description) %>%
+  summarise(`Total Revenues` = sum(Revenue),
+            `Number of Purchases` = n(),
+            `Median Price of Purchase` = median(Price),
+            `Median Quantity of Purchase` = median(Quantity), .groups = "drop") %>%
+  arrange(desc(`Total Revenues`))
+```
+
+In fact, the bin with the cheapest items makes up for more than 90% of revenues as well, even if we notice that the distribution changes a little bit for the cancelled orders, with more weight on the highest tiers. QUI POI HO TOLTO LE CANCELLED INVOICES, LE RIMETTO?
+
+```{r}
+df %>%
+  filter(!str_starts("Invoice", "c")) %>%
+  group_by(StockCode, Description) %>%
+  mutate(Revenue = Quantity * Price,
+         `Median Price` = median(Price)) %>%
+  group_by(`Price Bins` = cut(`Median Price`, 10), .drop = FALSE) %>%
+  summarise(`Total Revenues` = sum(Revenue),
+            `Number of Purchases` = n()) %>%
+  mutate(`Percentage over Total Revenues` = formattable::percent(`Total Revenues` / sum(`Total Revenues`)),
+         `Percentage over Number of Purchases` = formattable::percent(`Number of Purchases` / sum(`Number of Purchases`))) %>%
+  relocate(`Percentage over Total Revenues`, .after = `Total Revenues`)
+```
+
+<br>
+
+# - *items more frequently cancelled*
+
+Up until now we examined only confirmed invoices, but the cancellation of them is a phenomenon we must tackle as well.
+
+```{r}
+df %>%
+  mutate(Status = if_else(str_starts(Invoice, "C"), "Cancelled Purchases", "Confirmed Purchases")) %>%
+  group_by(StockCode, Description, Status) %>%
+  summarise(`Number of Occurrences` = n(), .groups = "drop_last") %>%
+  tidyr::pivot_wider(names_from = Status, values_from = `Number of Occurrences`) %>%
+  mutate(`Rate of Cancellation` = formattable::percent(`Cancelled Purchases` / `Confirmed Purchases`)) %>%
+  arrange(desc(`Rate of Cancellation`)) %>%
+  left_join(df %>%
+              mutate(Status = if_else(str_starts(Invoice, "C"), "Median Price Cancelled Purchases", "Median Price Confirmed Purchases")) %>%
+              group_by(StockCode, Description, Status) %>%
+              summarise(`Median Price` = median(Price), .groups = "drop_last") %>%
+              tidyr::pivot_wider(names_from = Status, values_from = `Median Price`), by = c("StockCode", "Description")) %>%
+  relocate(`Rate of Cancellation`, `Confirmed Purchases`, `Median Price Confirmed Purchases`, `Cancelled Purchases`, `Median Price Cancelled Purchases`, .after = Description)
+```
+
+From the previous table we can filter for items that had a lower median price when cancelled.
+
+```{r}
+df %>%
+  mutate(Status = if_else(str_starts(Invoice, "C"), "Cancelled Purchases", "Confirmed Purchases")) %>%
+  group_by(StockCode, Description, Status) %>%
+  summarise(`Number of Occurrences` = n(), .groups = "drop_last") %>%
+  tidyr::pivot_wider(names_from = Status, values_from = `Number of Occurrences`) %>%
+  mutate(`Rate of Cancellation` = formattable::percent(`Cancelled Purchases` / `Confirmed Purchases`)) %>%
+  arrange(desc(`Rate of Cancellation`)) %>%
+  left_join(df %>%
+              mutate(Status = if_else(str_starts(Invoice, "C"), "Median Price Cancelled Purchases", "Median Price Confirmed Purchases")) %>%
+              group_by(StockCode, Description, Status) %>%
+              summarise(`Median Price` = median(Price), .groups = "drop_last") %>%
+              tidyr::pivot_wider(names_from = Status, values_from = `Median Price`), by = c("StockCode", "Description")) %>%
+  relocate(`Rate of Cancellation`, `Confirmed Purchases`, `Median Price Confirmed Purchases`, `Cancelled Purchases`, `Median Price Cancelled Purchases`, .after = Description) %>%
+  filter(`Median Price Cancelled Purchases` < `Median Price Confirmed Purchases`)
+```
+
+Or for items that have always been cancelled.
+
+```{r}
+df %>%
+  mutate(Status = if_else(str_starts(Invoice, "C"), "Cancelled Purchases", "Confirmed Purchases")) %>%
+  group_by(StockCode, Description, Status) %>%
+  summarise(`Number of Occurrences` = n(), .groups = "drop_last") %>%
+  tidyr::pivot_wider(names_from = Status, values_from = `Number of Occurrences`) %>%
+  mutate(`Rate of Cancellation` = formattable::percent(`Cancelled Purchases` / `Confirmed Purchases`)) %>%
+  arrange(desc(`Rate of Cancellation`)) %>%
+  left_join(df %>%
+              mutate(Status = if_else(str_starts(Invoice, "C"), "Median Price Cancelled Purchases", "Median Price Confirmed Purchases")) %>%
+              group_by(StockCode, Description, Status) %>%
+              summarise(`Median Price` = median(Price), .groups = "drop_last") %>%
+              tidyr::pivot_wider(names_from = Status, values_from = `Median Price`), by = c("StockCode", "Description")) %>%
+  relocate(`Rate of Cancellation`, `Confirmed Purchases`, `Median Price Confirmed Purchases`, `Cancelled Purchases`, `Median Price Cancelled Purchases`, .after = Description) %>%
+  filter(is.na(`Confirmed Purchases`))
+```
+
+the breakdown for the price bins is not so different
+
+```{r}
+df %>%
+  mutate(Status = if_else(!str_detect(Invoice, "C"), "Revenues", "Revenues Lost for Cancellations")) %>%
+  group_by(StockCode, Description, Status) %>%
+  mutate(Revenue = Quantity * Price,
+         `Median Price` = median(Price)) %>%
+  group_by(`Price Bins` = cut(`Median Price`, 10), Status, .drop = FALSE) %>%
+  summarise(`Total Revenues` = sum(abs(Revenue)), .groups = "drop") %>%
+  mutate(Status = coalesce(Status, "Revenues")) %>%
+  tidyr::pivot_wider(names_from = Status, values_from = `Total Revenues`, values_fill = 0) %>%
+  rowwise() %>%
+  mutate(`Percentage over Revenues` = formattable::percent(`Revenues Lost for Cancellations` / `Revenues`))
+```
+
+<br>
+
+QUI PER TROVARE QUALI Invoice ABBIANO LO STESSO stockCode, PUO' ESSERE UTILE IN Online Retailer Investigation/Investigating Items
+
+```{r}
+df %>%
+  count(StockCode, Invoice) #E' QUESTO, POI POSSO FILTRARE PER StockCode
+df %>%
+  count(Invoice, StockCode) %>%
+  print() %>%
+  count(StockCode, sort = TRUE) #QUESTA E' MANIERA SBAGLIATA DI CONTARE QUANTE VOLTE APPAIANO GLI STOCKCODE, DATO CHE COMPRIMO DF ED ELIMINO VALORI > 1
+df %>%
+  count(as.Date(InvoiceDate), Invoice, StockCode) %>% #POCO SENSATO QUESTO DATO CHE DATA E INVOICE HANNO RELAZIONE 1 A 1
+  print() %>%
+  group_by(StockCode) %>%
+  filter(n() > 1) %>% #ANCHE FILTRARE SU STOCKCODE NON VA BENE, DOVREI FILTARE SU INVOICE? IL SECONDO ARGOMENTO DEL PRIMO count()?
+  arrange(StockCode)
+```
+
+# - *country breakdown*
+
+Let’s take a look now at the five most popular items for each country.
+
+```{r}
+df %>% 
+  filter(!str_starts(Invoice, "C")) %>%
+  group_by(Country, StockCode, Description) %>%
+  summarise(`Total Quantity` = sum(Quantity)) %>%
+  arrange(Country, desc(`Total Quantity`)) %>%
+  group_by(Country) %>%
+  slice(1:5)
+```
+
+and what items are popular in more countries, (eliminating the Countries with NAs QUESTO DEVO RIFLETTERE SE FARLO).
+
+```{r}
+df %>% 
+  filter(!str_starts(Invoice, "C")) %>%
+  group_by(Country, StockCode, Description) %>%
+  summarise(`Total Quantity` = sum(Quantity), .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = Country, values_from = `Total Quantity`) %>%
+  mutate(`Number of Countries Popular In` = 40 - rowSums(is.na(cur_data())), .after = Description) %>% #METTERE pick() POI?
+  arrange(desc(`Number of Countries Popular In`))
+```
+
+We can also be interested in knowing if an item has different prices across the different countries it is sold in.
+
+```{r}
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  group_by(Country, StockCode, Description) %>%
+  summarise(`Median Price` = median(Price), .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = Country, values_from = `Median Price`) %>%
+  left_join(df %>%
+              filter(!str_starts(Invoice, "C")) %>%
+              group_by(StockCode, Description) %>%
+              summarise(`Global Median Price` = median(Price), .groups = "drop"), by = c("StockCode", "Description")) %>%
+  relocate(`Global Median Price`, .after = Description)
+# df %>%
+#   filter(!str_starts(Invoice, "C")) %>%
+#   group_by(StockCode, Description) %>%
+#   mutate(`Global Median Price` = median(Price)) %>%
+#   group_by(Country, StockCode, Description) %>%
+#   mutate(`Median Price` = median(Price), .groups = "drop") %>%
+#   tidyr::pivot_wider(id_cols = c(StockCode, Description, `Global Median Price`), names_from = Country, values_from = `Median Price`)
+```
+
+QUESTO POTREBBE ANDARE BENE IN UN DOCUMENTO SUI PAESI
+Let’s see now if the locations introduce some specific behaviors, like that the clients from the Netherlands buy a more restricted pool of item that the ones in Germany but they yield a higher revenue. QUI POTREI PARLARE DI NUOVO DELLA OMOGENEITA’ DEGLI ORDINI COME HO FATTO PER I CLIENTI
+
+```{r}
+df %>%
+  mutate(Revenue = Quantity * Price) %>% #RIFLETTERE SE METTERE STATUS O NO
+  group_by(Country) %>%
+  summarise(N_Invoices = n(),
+            N_Unique_Items = n_distinct(StockCode),
+            Tot_Quantity = sum(Quantity),
+            Tot_Revenue = sum(Revenue)) %>%
+  ungroup() %>%
+  mutate(across(c(where(is.numeric), -N_Invoices), ~ formattable::percent(.x / sum(.x)), .names = "{.col}_Perc")) %>%
+  arrange(desc(Tot_Revenue_Perc))
+```
+
+<br>
+
+# - *breakdown by customers*
+
+# - *3 most popular items*
+
+QUESTO MEGLIO IN QUELLO SUGLI ITEMS
+We can then investigate the three most popular items for each client with the clients ordered by the sum of the quantities.
+
+```{r}
+df %>%
+  group_by(CustomerID, Country, Description) %>%
+  summarise(Quantity = sum(Quantity)) %>%
+  slice(1:3) %>%
+  mutate(Sum = sum(Quantity)) %>%
+  arrange(desc(Sum)) %>%
+  select(-Sum)
+```
+
+<br>
+
+# - *main takeaways*
+
+We produced various tables that can be explored to gain insights on what items perform best for certain common metrics like the most commonly sold and the ones yielding highest revenues. The problematic phenomenon of cancellation has also been examined, together with the a breakdown by countries.

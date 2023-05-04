@@ -1,0 +1,458 @@
+---
+title: ""
+output: 
+  html_document: 
+    df_print: paged
+    code_folding: hide
+---
+
+```{r, include = FALSE}
+library(readxl)
+df <- read_excel(here::here("online_retail_II.xlsx"))
+library(dplyr)
+df <- df %>%
+  mutate(CustomerID = as.character(`Customer ID`), .keep = "unused", .after = Price)
+```
+
+Building from the previous document, where we removed the rows not pertaining to actual transactions, we continue to clean the data frame, concentrating here on missing values (NAs) and possible duplicated rows.
+
+<br>
+
+# - *missing values (NAs)*
+
+Missing values are coded as NA, and they signify that, for whatever reason, a value in a cell has not been imputed like here in the `Description` and `CustomerID` columns.
+
+```{r}
+# df %>%
+#   filter(across(everything(), is.na)) #CAPIRE LA DIFFERENZA TRA QUESTI DUE, across() E' TIPO if_all() QUINDI NON MOSTRA NULLA?
+# df %>%
+#   filter(if_any(everything(), is.na))
+df %>%
+  filter(if_any(everything(), ~ is.na(.x))) %>%
+  slice(4)
+```
+
+Our original data frame had this distribution of missing values.
+
+```{r}
+df %>%
+  summarise(across(everything(), ~ sum(is.na(.x)))) %>%
+  tidyr::pivot_longer(cols = everything()) %>%
+  left_join(df %>%
+              summarise(across(everything(), ~ formattable::percent(mean(is.na(.x))))) %>%
+              tidyr::pivot_longer(cols = everything()), by = "name") %>%
+  rename(Column = name, "Total Number" = value.x, Percentage = value.y) %>%
+  arrange(desc(`Total Number`))
+```
+
+While the one resulting from the cleaning procedure of the last document this one,
+
+```{r}
+library(stringr)
+df_cleaned <- df %>%
+  filter(str_length(StockCode) == 5 |
+           str_detect(StockCode, "^\\d{5}[a-zA-Z]{1,2}$") |
+           str_detect(StockCode, "PADS|DCGS|SP|gift")) %>%
+  filter(Price != 0) %>% #VEDERE SE QUESTA POSSO UNIRLA, RIGUARDARE ANCHE LA PARTE SU my dplyr handbook PER VEDERE SE E' CHIARA ABBASTANZA
+  mutate(Country = na_if(Country, "Unspecified"), .keep = "unused", .after = Price)
+df_cleaned %>%
+  summarise(across(everything(), ~ sum(is.na(.x)))) %>%
+  tidyr::pivot_longer(cols = everything()) %>%
+  left_join(df_cleaned %>%
+              summarise(across(everything(), ~ formattable::percent(mean(is.na(.x))))) %>%
+              tidyr::pivot_longer(cols = everything()), by = "name") %>%
+  rename(Column = name, "Total Number" = value.x, Percentage = value.y) %>%
+  arrange(desc(`Total Number`))
+```
+
+from where we can see that the manipulations we applied to the original data frame removed some NAs in the `CustomerID` column, all of them in the `Description` one while adding 308 in `Country`, as we modified the "Unspecified" value to NA.
+
+We also have to mention that removing NAs can modify tables seen in previous documents, more specifically this one where, for some countries, the number of customers decreases of one digit if we remove the missing values in the `CustomerID` column.
+
+```{r}
+df %>%
+  count(Country, wt = n_distinct(CustomerID), sort = TRUE, name = "Number of Customers") %>%
+  left_join(df %>%
+              filter(!is.na(CustomerID)) %>%
+              count(Country, wt = n_distinct(CustomerID), name = "Number of Customers after Removing NAs"), by = "Country") 
+```
+
+This is because NAs are counted as one value, like they are one actual customerID value, as we can see in the following table where we show the CustomerIDs for EIRE.
+
+```{r}
+df %>%
+  filter(Country == "EIRE") %>%
+  count(CustomerID, name = "Number of Occurences")
+```
+
+The other tables modified by previous manipulations on the missing values are the one about the total number of distinct `Description` values and the one showing distribution of values of the `Country` column, for both of which we've already seen the changes in the last document.
+
+<br>
+
+## - *CustomerID*
+
+Getting back to the table with the distribution of NAs, `CustomerID` is obviously very concerning, as its missing values amount to 20% of the all data frame.
+Removing them would cause a big loss in information and modeling power so we would have to decide on a case per case basis depending on the type of analysis. 
+
+Let's see if there are some patterns for these missing values, as a way to find causes or common factors as well.
+
+Every `Invoice` value has either the `CustomerID`'s one present or missing in all of its rows so we exclude an error in data entry like that the value of `CustomerID` has, for example, been imputed only for the first row of each value of `Invoice` and not for the subsequent others.
+
+```{r}
+df_cleaned %>%
+  mutate(NA_CustomerID = if_else(is.na(CustomerID), 1, 0)) %>%
+  group_by(Invoice) %>%
+  summarize("Percentage of NAs" = formattable::percent(mean(NA_CustomerID))) %>%
+  count(`Percentage of NAs`, name = "Number of Invoices")
+```
+
+Let's see if there are some values in the other characters columns for which the `CustomerID` value is always missing.
+
+We start with `StockCode` (together with `Description`, to give some context).
+
+```{r}
+df_cleaned %>%
+  mutate(NA_CustomerID = if_else(is.na(CustomerID), 1, 0)) %>%
+  group_by(StockCode, Description) %>%
+  summarize("Percentage of NAs" = formattable::percent(mean(NA_CustomerID)),
+            "Number of Occurences" = n(), .groups = "drop") %>%
+  filter(`Percentage of NAs` == 1) %>%
+  arrange(desc(`Number of Occurences`))
+```
+
+Then `Description` alone.
+
+```{r}
+df_cleaned %>%
+  mutate(NA_CustomerID = if_else(is.na(CustomerID), 1, 0)) %>%
+  group_by(Description) %>%
+  summarize("Percentage of NAs" = formattable::percent(mean(NA_CustomerID)),
+            "Number of Occurences" = n()) %>%
+  filter(`Percentage of NAs` == 1) %>%
+  arrange(desc(`Number of Occurences`))
+```
+
+And finally `Country`.
+
+```{r}
+df_cleaned %>%
+  mutate(NA_CustomerID = if_else(is.na(CustomerID), 1, 0)) %>%
+  group_by(Country) %>%
+  summarize("Percentage of NAs" = formattable::percent(mean(NA_CustomerID)),
+            "Number of Occurences" = n()) %>%
+  filter(`Percentage of NAs` == 1) %>%
+  arrange(desc(`Number of Occurences`))
+```
+
+The `Country` column seems more interesting in this regard, but those three countries don't contribute much to the overall number of NAs in the `CustomerID` column (only 118 rows out of 103183).
+
+```{r}
+df_cleaned %>%
+  filter(Country %in% c("Bermuda", "Hong Kong", "Lebanon"))
+```
+
+Also the countries with a percentage of NAs in the `CustomerID` column minor than 100% don't communicate much, besides the highest percentages belonging to countries outside of Europe.
+
+```{r}
+df_cleaned %>%
+  mutate(NA_CustomerID = if_else(is.na(CustomerID), 1, 0)) %>%
+  group_by(Country) %>%
+  summarize("Percentage of NAs" = mean(NA_CustomerID),
+            "Number of Occurences" = n()) %>%
+  filter(`Percentage of NAs` > 0 &
+           `Percentage of NAs` < 1) %>%
+  mutate(`Percentage of NAs` = formattable::percent(`Percentage of NAs`)) %>%
+  arrange(desc(`Percentage of NAs`))
+```
+
+But we have countries outside of Europe also with 0 NAs in the `CustomerID` column. 
+
+```{r}
+df_cleaned %>%
+  mutate(NA_CustomerID = if_else(is.na(CustomerID), 1, 0)) %>%
+  group_by(Country) %>%
+  summarize("Percentage of NAs" = mean(NA_CustomerID),
+            "Number of Occurences" = n()) %>%
+  filter(`Percentage of NAs` == 0) %>%
+  mutate(`Percentage of NAs` = formattable::percent(`Percentage of NAs`)) %>%
+  arrange(desc(`Number of Occurences`))
+```
+
+It doesn't seem to exist as well a peculiar value of `Quantity` or `Price` for which an NA in the `CustomerID` column is much more frequent compared to others.
+
+```{r}
+df_cleaned %>%
+  mutate(NA_CustomerID = if_else(is.na(CustomerID), 1, 0)) %>%
+  group_by(Quantity) %>%
+  summarize("Percentage of NAs" = formattable::percent(mean(NA_CustomerID)),
+            "Number of Occurences" = n()) %>%
+  filter(`Percentage of NAs` == 1) %>%
+  arrange(desc(`Number of Occurences`))
+df_cleaned %>%
+  mutate(NA_CustomerID = if_else(is.na(CustomerID), 1, 0)) %>%
+  group_by(Price) %>%
+  summarize("Percentage of NAs" = formattable::percent(mean(NA_CustomerID)),
+            "Number of Occurences" = n()) %>%
+  filter(`Percentage of NAs` == 1) %>%
+  arrange(desc(`Number of Occurences`))
+```
+
+Maybe there were some specific days where the CustomerID has not been imputed?
+QUI DEVO TOGLIERE I GIORNI IN CUI IL NEGOZIO E' CHIUSO E POI AVANZO L'IPOTESI DI CONSOLIDAZIONE DATI CON LA TABELLA DEI CLIENTI?
+
+```{r}
+library(ggplot2)
+df_cleaned %>%
+  mutate(NA_CustomerID = if_else(is.na(CustomerID), 1, 0)) %>%
+  group_by(InvoiceDay = as.Date(df_cleaned$InvoiceDate)) %>%
+  summarize(perc = sum(NA_CustomerID) / n() * 100) %>%
+  ggplot(aes(InvoiceDay, perc)) +
+  geom_line() +
+  labs(x = "% of CustomerID missing per single InvoiceDay")
+```
+
+The graph shows us that the lack of CustomerID is very distributed along the temporal dimension of our data frame, with some spikes on specific days. We have 20% of missing values so we could expect it.
+
+
+QUESTE NON SO BENE COME SPIEGARLE E NEANCHE SE SIANO PROPRIO CORRETTE
+
+RIFLETTERE SU QUELLA CON QUANTITY CHE TIRA FUORI 1 COME VALORE MAX, MA DIREI CHE NON CI SIA NIENTE DA TIRARE FUORI
+```{r}
+df_cleaned %>%
+  filter(is.na(CustomerID) &
+           Quantity == 1) %>%
+  count(across(c(StockCode, Description, Price, Country)), sort = TRUE)
+df_cleaned %>%
+  mutate(NA_CustomerID = if_else(is.na(CustomerID), 1, 0)) %>%
+  group_by(Quantity) %>%
+  summarize("Percentage of NAs" = formattable::percent(mean(NA_CustomerID)),
+            "Number of Occurences" = n()) %>%
+  filter(Quantity == 1) %>%
+  arrange(desc(`Number of Occurences`))
+```
+
+
+```{r}
+df_cleaned %>%
+  filter(is.na(CustomerID)) %>%
+  count(across(c(StockCode, Quantity, Price, Country)), sort = TRUE)
+df_cleaned %>%
+  filter(is.na(CustomerID)) %>%
+  count(across(c(StockCode, Quantity, Price, Country))) %>%
+  count(StockCode, sort = TRUE)
+df_cleaned %>%
+  filter(is.na(CustomerID)) %>%
+  count(across(c(StockCode, Quantity, Price, Country))) %>%
+  count(Quantity, sort = TRUE)
+df_cleaned %>%
+  filter(is.na(CustomerID)) %>%
+  count(across(c(StockCode, Quantity, Price, Country))) %>%
+  count(Price, sort = TRUE)
+df_cleaned %>%
+  filter(is.na(CustomerID)) %>%
+  count(across(c(StockCode, Quantity, Price, Country))) %>%
+  count(Country, sort = TRUE)
+```
+
+QUESTO NON MI SEMBRA UTILE
+Let's identify the invoices with missing values in CustomerID, 1693 out of 24680.
+POTREI TOGLIERE filter(perc_missing == 1), SE LO TOLGO VENGONO FUORI TUTTI I 24680, DOVREI TROVARE FATTORI COMUNI 
+O METTERE 0 PER MOSTRARE TUTTI GLI Invoice/etc CON NAs
+
+```{r}
+df_cleaned %>%
+  mutate(NA_CustomerID = if_else(is.na(CustomerID), 1, 0)) %>%
+  group_by(Invoice) %>%
+  summarize(perc_missing = formattable::percent(mean(NA_CustomerID))) %>%
+  filter(perc_missing == 1)
+```
+
+
+POTREI ANCHE FARE UN clustering SOLO SUI CUSTOMER ID NAs PER VEDERE SE RIESCO A RAGGRUPPARLI MA CON I DATI DI UN SOLO ANNO...
+
+## - *Country*
+
+About the missing values in `Country`, they are present for just 4 customers.
+
+```{r}
+df_cleaned %>%
+  filter(is.na(Country) &
+           !is.na(CustomerID)) %>%
+  count(CustomerID, name = "Number of Occurrences")
+```
+
+Those customers never had a `Country` value in this data frame, so we can't impute them.
+
+```{r}
+df_cleaned %>%
+  filter(is.na(Country) &
+           !is.na(CustomerID)) %>%
+  count(CustomerID, Country, name = "Number of Occurrences")
+```
+
+<br>
+
+Final observation, there are 30 rows where we have NAs in both the `CustomerID` and `Country` columns.
+QUESTO POTREI METTERLO IN CIMA
+
+```{r}
+df_cleaned %>%
+  filter(is.na(CustomerID) & 
+           is.na(Country))
+```
+
+ 
+QUESTA E' UN PO' INUTILE MA IL CODICE E' BELLO E CI DEVO RIFLETTERE SOPRA, DIREI CHE SONO COSE GIA' VISTE
+We can also inspect whether the missing values are more present for certain values of one or more variables, in this case CustomerID.
+
+
+```{r}
+df_cleaned %>%
+  group_by(StockCode) %>%
+  summarise(across(everything(), ~ formattable::percent(mean(is.na(.x))))) %>%
+  arrange(across(everything())) %>%
+  filter(rowSums(across(c(-StockCode))) != 0)
+df_cleaned %>%
+  group_by(Description) %>%
+  summarise(across(everything(), ~ formattable::percent(mean(is.na(.x))))) %>%
+  arrange(across(everything())) %>%
+  filter(rowSums(across(c(-Description))) != 0)
+df_cleaned %>%
+  group_by(Quantity) %>%
+  summarise(across(everything(), ~ formattable::percent(mean(is.na(.x))))) %>%
+  arrange(across(everything())) %>%
+  filter(rowSums(across(c(-Quantity))) != 0)
+df_cleaned %>%
+  group_by(Price) %>%
+  summarise(across(everything(), ~ formattable::percent(mean(is.na(.x))))) %>%
+  arrange(across(everything())) %>%
+  filter(rowSums(across(c(-Price))) != 0)
+df_cleaned %>%
+  group_by(CustomerID) %>%
+  summarise(across(everything(), ~ formattable::percent(mean(is.na(.x))))) %>%
+  arrange(across(everything())) %>%
+  filter(rowSums(across(c(-CustomerID))) != 0)
+df_cleaned %>%
+  group_by(Country) %>%
+  summarise(across(everything(), ~ formattable::percent(mean(is.na(.x))))) %>%
+  arrange(across(everything())) %>%
+  filter(rowSums(across(c(-Country))) != 0)
+```
+
+<br>
+
+# - *duplicated rows*
+
+Sometimes we might have rows that are duplicated, indicating a problem in the data ingestion/consolidation phase.
+As an example we show the repetitions for stock codes 21491 and 21912 happening in invoice 489517.
+
+```{r}
+df_cleaned %>%
+  filter(Invoice == "489517" &
+           StockCode %in% c("21491", "21912"))
+```
+
+We can easily remove the duplicated rows after the first,
+
+```{r}
+df_cleaned %>%
+  filter(Invoice == "489517" &
+           StockCode %in% c("21491", "21912")) %>%
+  distinct()
+```
+
+and doing that on all the data frame we notice that we lose 6853 rows, roughly the 1%.
+
+```{r}
+tibble("Number of Rows Cleaned Data Frame" = nrow(df_cleaned), 
+       "Number of Rows Cleaned Data Frame w/o Duplicated Rows" = df_cleaned %>%
+         distinct() %>%
+         nrow(),
+       "Difference" = `Number of Rows Cleaned Data Frame` - `Number of Rows Cleaned Data Frame w/o Duplicated Rows`,
+       "Percentage" = formattable::percent((`Number of Rows Cleaned Data Frame` - `Number of Rows Cleaned Data Frame w/o Duplicated Rows`) /
+         `Number of Rows Cleaned Data Frame`))
+```
+
+We can inspect the removed rows,
+
+```{r}
+df_cleaned %>%
+  group_by(across(everything())) %>% #ragionare sulla differenza tra i due
+  filter(n() != 1) %>%
+  arrange(Invoice, StockCode)
+df_cleaned %>%
+  count(across(everything())) %>% #COME MAI NON MI SUGGERISCE pick() QUI?
+  filter(n > 1)
+```
+
+to see if they are present during certain condition, usually at a specific time stamp
+QUESTO GRAFICO DOVREI PARAGONARLO CON QUALCOS'ALTRO, MAGARI TIPO IL NUMERO DI ARTICOLI GIORNALIERI
+
+```{r}
+library(ggplot2)
+df_cleaned %>%
+  group_by(across(everything())) %>% #vedere se usare l'altro per il grafico
+  filter(n() != 1) %>%
+  arrange(Invoice, StockCode) %>%
+  ungroup() %>%
+  count(InvoiceDay = as.Date(InvoiceDate)) %>%
+  print() %>%
+  ggplot(aes(InvoiceDay, n)) +
+  geom_line()
+```
+
+To advance an hypothesis, we show Invoice 489517, one invoice with 38 rows, 8 of which are duplicated one or several times.
+
+```{r}
+df_cleaned %>%
+  filter(Invoice == "489517") %>% #mettiamo il codie con count() qui?
+  arrange(StockCode)
+```
+
+We suggest then that it could also be possible that, given the nature of this data frame, those are not duplicated rows but just purchases that has been imputed several times without aggregating them.
+Here for example StockCode 21491 might have had just one row with 2 for Quantity or, 
+
+```{r}
+df_cleaned %>%
+  filter(Invoice == "489517" &
+           StockCode == "21491")
+```
+
+like StockCode 21790 where one row has 4 for Quantity and the other 1. QUESTO DIREI CHE PUO' ESSERE TOLTO
+
+```{r}
+df_cleaned %>%
+  filter(Invoice == "489517" &
+           StockCode == "21790")
+```
+
+So erasing them might not be a good option as we would lose information about Quantity. SOLO PER IL PRIMO ESEMPIO DIREI, PENSARE POI ANCHE AD ALTRI TRADE-OFFS IN BASE AD ANALISI SUCCESSIVE
+However, we could merge these lines in case we are considering that are not repeated.
+
+```{r}
+df_cleaned %>%
+  group_by(across(c(-Quantity))) %>%
+  summarise(Quantity = sum(Quantity)) %>%
+  filter(Invoice == "489517")
+```
+
+QUINDI QUI PER TROVARE STOCKCODE CHE CAMBIANO QUANTITA'/PREZZO NELLO STESSO INVOICE, POTREI METTERLO IN QUALCHE FILE DI Online Retailer
+
+```{r}
+df %>%
+  count(Invoice, StockCode, wt = n_distinct(Quantity)) %>%
+  filter(n > 1)
+df %>%
+  count(Invoice, StockCode, wt = n_distinct(Price)) %>%
+  filter(n > 1)
+```
+
+# - *main takeaways*
+
+- we could not find an explanation for the high number of missing values in the `CustomerID` column
+- the missing values in the `Country` column cannot be imputed, as they pertain to customers for which we don't have that information
+- duplicated rows might be actual purchases and not repetitions caused by faulty events
+
+# - *actions performed*
+
+No definitive manipulations were performed here, we will decide on a case per case basis depending on the analysis at hand.
