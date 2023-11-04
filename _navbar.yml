@@ -1,0 +1,34 @@
+name: "disclaimer"
+title: "An Online Retailer Investigation"
+type: inverse
+left:
+  - text: "Introduction & Data Wrangling"
+    menu:
+       - text: "Data Frame Presentation & Basic Checks"
+         href: ./An_Introduction_to_the_Data.html
+       - text: "Data Wrangling Part 1 (data cleaning)"
+         href: ./Data_Wrangling_Part1_-data_cleaning-.html
+       - text: "Data Wrangling Part 2 (missing values & duplicated rows)"
+         href: ./Data_Wrangling_Part2_-missing_values_duplicated_rows-.html
+       - text: "Data Wrangling Part 3a (outliers for Quantity)"
+         href: ./Data_Wrangling_Part3a_-Quantity-outliers-.html 
+       - text: "Data Wrangling Part 3b (outliers for Price)"
+         href: ./Data_Wrangling_Part3b_-Price-outliers-.html 
+  - text: "Extracting Insights"
+    menu:
+       - text: "Investigating Invoices"
+         href: ./Investigating_Invoices.html
+       - text: "Investigating Items"
+         href: ./Investigating_Items.html
+       - text: "Investigating Customers"
+         href: ./Investigating_Customers.html
+  - text: "Advanced Inquiries"
+    menu:
+       - text: "Analyzing Sales Trends"
+         href: ./Analyzing_Sales_Trends.html
+       - text: "Market Basket Analysis"
+         href: ./Market_Basket_Analysis.html
+       - text: "Customers' Segmentation"
+         href: ./Customers_Segmentation.html
+       - text: "Understanding Cancellations"
+         href: ./Understanding_Cancellations.html

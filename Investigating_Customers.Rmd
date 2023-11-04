@@ -1,0 +1,369 @@
+---
+title: ""
+output: 
+  html_document: 
+    df_print: paged
+    code_folding: hide
+---
+
+```{r, include = FALSE}
+library(readxl)
+df <- read_excel(here::here("online_retail_II.xlsx"))
+library(dplyr)
+library(stringr)
+df <- df %>%
+  filter(str_length(StockCode) == 5 |
+           str_detect(StockCode, "^\\d{5}[a-zA-Z]{1,2}$") |
+           str_detect(StockCode, "PADS|DCGS|SP|gift")) %>%
+  filter(Price != 0) %>%
+  mutate(CustomerID = as.character(`Customer ID`),
+         Country = na_if(Country, "Unspecified"), .keep = "unused", .after = Price)
+```
+
+So after invoices and items, we will here investigate the customers, in the same vein as we previously did.
+And, as in the previous analyses, we will not remove [duplicated rows](https://pykaalexandro.github.io/An-Online-Retailer-Investigation/Data_Wrangling_Part2_-missing_values_duplicated_rows-.html#-_duplicated_rows), to not lose information about `Quantity`.
+
+<br>
+
+# - *addressing the missing values*
+
+As discussed in a [previous document](https://pykaalexandro.github.io/An-Online-Retailer-Investigation/Data_Wrangling_Part2_-missing_values_duplicated_rows-.html#-_CustomerID) the `CustomerID` column suffers from a large number of missing values, roughly the `20%`.
+
+```{r}
+df %>%
+  summarise("Number of Distinct Customers" = n_distinct(CustomerID[!is.na(CustomerID)]),
+            "Number of Missing Values" = sum(is.na(CustomerID)),
+            "Percentage of Missing Values" = formattable::percent(mean(is.na(CustomerID))))
+```
+
+<br>
+
+That `19.89%` of missing values could pertain to a single customer (the most extreme case) but more likely to many different ones as they are located in `13` different countries.
+
+```{r}
+df %>% 
+  filter(is.na(CustomerID)) %>% 
+  count(Country, name = "Number of Missing Values", sort = TRUE)
+```
+
+As we have no way to distinguish between them, for the scope of this analysis we will remove them altogether.
+
+We must address that, removing those rows, we will also remove their information placed on other columns and that are only present in conjunction with a missing value in the `CustomerID` column, modifying the general characteristics of the data frame.
+
+For example the number of countries will decrease to `37` from `40` (we will lose `Bermuda`, `Hong Kong` and `Lebanon`) and the number of stock codes of roughly `200` items.
+
+```{r}
+tibble(CustomerID = "Original Data Frame",
+       "Number of Countries" = n_distinct(df$Country),
+       "Number of Stock Codes" = n_distinct(df$StockCode)) %>%
+  bind_rows(df %>%
+              mutate(CustomerID = if_else(!is.na(CustomerID), "Removing NAs", "Keeping Only NAs")) %>%
+              group_by(CustomerID) %>%
+              summarise("Number of Countries" = n_distinct(Country),
+                        "Number of Stock Codes" = n_distinct(StockCode)) %>%
+              arrange(desc(CustomerID)))
+df <- df %>%
+  filter(!is.na(CustomerID))
+```
+
+<br> 
+
+# - *breakdown by country*
+
+We can start by identifying where our customers are located. 
+
+```{r}
+df %>%
+  count(Country, wt = n_distinct(CustomerID), sort = TRUE, name = "Number of Customers") %>% 
+  mutate("In Percentage" = formattable::percent(`Number of Customers` / sum(`Number of Customers`)))
+```
+
+specifying that `4` of them changed location, as we've already seen in a previous document.   
+We notice that their `CustomerID`s are curiously close to each others.
+
+```{r}
+df %>%
+  count(CustomerID, Country, name = "Number of Occurrences") %>%
+  group_by(CustomerID) %>%
+  filter(n() > 1) %>%
+  ungroup()
+```
+
+<br>
+
+Given the international nature of our `UK` based business, maybe we want to know how many clients are located in `Europe` or not.
+
+```{r}
+EU <-  c("Austria", "Belgium", "Channel Islands", "Cyprus", "Denmark", "EIRE", "Finland", "France", "Germany", "Greece", "Iceland", "Italy", "Lithuania", "Malta", "Netherlands", "Norway", "Poland", "Portugal", "Spain", "Sweden", "Switzerland", "United Kingdom")
+df %>%
+  distinct(Country, CustomerID) %>%
+  mutate("In EU" = case_when(is.na(Country) ~ NA,
+                             !Country %in% EU ~ "No",
+                             Country %in% EU ~ "Yes")) %>%
+  count(`In EU`, name = "Number of Customers", sort = TRUE) %>%
+  mutate("In Percentage" = formattable::percent(`Number of Customers` / sum(`Number of Customers`)))
+```
+
+Our clients are mostly located in `Europe`, but where in `Europe`?
+
+```{r}
+df %>%
+  distinct(Country, CustomerID) %>%
+  mutate("In EU" = case_when(is.na(Country) ~ NA,
+                             !Country %in% EU ~ "No",
+                             Country %in% EU ~ "Yes")) %>%
+  filter(`In EU` == "Yes") %>%
+  count(Country, name = "Number of Customers", sort = TRUE) %>%
+  mutate("In Percentage" = formattable::percent(`Number of Customers` / sum(`Number of Customers`)))
+```
+
+And what about the rest of the world?
+
+```{r}
+df %>%
+  distinct(Country, CustomerID) %>%
+  mutate("In EU" = case_when(is.na(Country) ~ NA,
+                             !Country %in% EU ~ "No",
+                             Country %in% EU ~ "Yes")) %>%
+  filter(`In EU` == "No") %>%
+  count(Country, name = "Number of Customers", sort = TRUE) %>%
+  mutate("In Percentage" = formattable::percent(`Number of Customers` / sum(`Number of Customers`)))
+```
+
+<br>
+
+# - *basic breakdown*
+
+Let's now provide some basics information, first the number of total invoices for every customer, without differentiating between confirmed and cancelled one, adding as well the number of distinct items for each of them, to assess how diverse are their purchases.
+
+```{r}
+df %>%
+  group_by(CustomerID) %>%
+  summarise("Number of Invoices" = n_distinct(Invoice),
+            "Number of Distinct Items Invoiced" = n_distinct(StockCode)) %>%
+  arrange(desc(`Number of Invoices`))
+```
+
+<br>
+
+Then the median quantity and revenues per invoice, again ordered by the largest but here concentrating only on the confirmed ones.
+
+```{r}
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  group_by(CustomerID, Invoice) %>%
+  summarise("Total Quantity per Invoice" = sum(Quantity),
+            "Total Revenue per Invoice" = sum(Quantity * Price), .groups = "drop_last") %>%
+  summarise("Rounded Median Quantity per Invoice" = round(median(`Total Quantity per Invoice`)),
+            "Rounded Median Revenues per Invoice" = round(median(`Total Revenue per Invoice`), 2)) %>%
+  arrange(desc(`Rounded Median Quantity per Invoice`))
+```
+
+<br>
+
+# - *cancelling customers*
+
+The phenomenon of cancelling invoices is strictly related to the customers, as they are the ones responsible for that, so it is important to study it in regards to them.
+Let's start with a breakdown differentiating by status and ordered by the clients invoiced the most.
+
+```{r}
+df %>%
+  mutate("Invoice Status" = if_else(str_starts(Invoice, "C"), "Cancelled", "Confirmed")) %>%
+  count(CustomerID, `Invoice Status`, wt = n_distinct(Invoice), name = "Number of Occurrences") %>%
+  group_by(CustomerID) %>%
+  mutate(Percentage = formattable::percent(`Number of Occurrences` / sum(`Number of Occurrences`)),
+         "Total Number Invoices" = sum(`Number of Occurrences`)) %>%
+  ungroup() %>%
+  arrange(desc(`Total Number Invoices`), CustomerID, desc(`Invoice Status`))
+```
+
+So we can isolate which ones never cancelled an order (`2626` out of `4314`).
+
+```{r}
+df %>%
+  mutate("Invoice Status" = if_else(str_starts(Invoice, "C"), "Cancelled", "Confirmed")) %>%
+  count(CustomerID, `Invoice Status`, wt = n_distinct(Invoice), name = "Number of Occurrences") %>%
+  group_by(CustomerID) %>%
+  mutate(Percentage = formattable::percent(`Number of Occurrences` / sum(`Number of Occurrences`))) %>%
+  ungroup() %>%
+  arrange(desc(`Number of Occurrences`)) %>%
+  filter(`Invoice Status` == "Confirmed" &
+           Percentage == 1)
+```
+
+The ones that always cancel orders (`29` out of `4314`).
+
+```{r}
+df %>%
+  mutate("Invoice Status" = if_else(str_starts(Invoice, "C"), "Cancelled", "Confirmed")) %>%
+  count(CustomerID, `Invoice Status`, wt = n_distinct(Invoice), name = "Number of Occurrences") %>%
+  group_by(CustomerID) %>%
+  mutate(Percentage = formattable::percent(`Number of Occurrences` / sum(`Number of Occurrences`))) %>%
+  ungroup() %>%
+  arrange(desc(`Number of Occurrences`)) %>%
+  filter(`Invoice Status` == "Cancelled" &
+           Percentage == 1)
+```
+
+And the third group, that orders and cancels both (`1659` out of `4314`), that can be filtered further by determining a threshold for the rate of cancellation.
+
+```{r}
+df %>%
+  mutate("Invoice Status" = if_else(str_starts(Invoice, "C"), "Cancelled", "Confirmed")) %>%
+  count(CustomerID, `Invoice Status`, wt = n_distinct(Invoice), name = "Number of Occurrences") %>%
+  group_by(CustomerID) %>%
+  mutate(Percentage = formattable::percent(`Number of Occurrences` / sum(`Number of Occurrences`)),
+         "Total Number Invoices" = sum(`Number of Occurrences`)) %>%
+  ungroup() %>%
+  arrange(desc(`Total Number Invoices`), CustomerID, desc(`Invoice Status`)) %>%
+  filter(Percentage > 0 &
+           Percentage < 1)
+```
+
+<br>
+
+# - *ranking the customers*
+
+Let’s continue with some more interesting information (excluding the cancelled invoices from these tables) about their spending capabilities, like the clients that purchased the most in term of quantity
+
+```{r}
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  group_by(CustomerID) %>%
+  summarise("Number of Invoices" = n_distinct(Invoice),
+            "Total Quantity Purchased" = sum(Quantity)) %>%
+  arrange(desc(`Total Quantity Purchased`))
+```
+
+and their total expenditure in British pounds, as both of these information can be useful to segment the clientele.
+
+```{r}
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  mutate(Expense = Quantity * Price) %>%
+  group_by(CustomerID) %>%
+  summarise("Number of Invoices" = n_distinct(Invoice),
+            "Total of Expenses" = round(sum(Expense), 2)) %>%
+  arrange(desc(`Total of Expenses`))
+```
+
+<br>
+
+We can merge the two former information into just one table, where we added a ranking for each metric and a total ranking (based on the average of the two, meaning we give them equal importance) by which we ordered the results. 
+We notice than that we have recurring customers in both `top10`.
+
+```{r}
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%  
+  mutate(Expense = Quantity * Price) %>%
+  group_by(CustomerID) %>%
+  summarise("Number of Invoices" = n_distinct(Invoice),
+            "Total Quantity Purchased" = sum(Quantity),
+            "Total of Expenses" = round(sum(Expense), 2)) %>%
+  mutate("Quantity Rank" = dense_rank(desc(`Total Quantity Purchased`)),
+         "Expenses Rank" = dense_rank(desc(`Total of Expenses`)),
+         "Total Rank" = dense_rank((`Quantity Rank` + `Expenses Rank`) / 2)) %>%
+  arrange(`Total Rank`) %>%
+  relocate(`Quantity Rank`, .after = `Total Quantity Purchased`)
+```
+
+<br>
+
+If we want to consider cancelled invoices as well, we could build a table with only those
+
+```{r}
+df %>%
+  filter(str_starts(Invoice, "C")) %>%  
+  mutate(Expense = abs(Quantity) * Price) %>%
+  group_by(CustomerID) %>%
+  summarise("Number of Cancelled Invoices" = n_distinct(Invoice),
+            "Total Quantity Cancelled" = sum(abs(Quantity)),
+            "Total of Lost Expenses" = round(sum(Expense), 2)) %>%
+  mutate("Quantity Rank" = dense_rank(desc(`Total Quantity Cancelled`)),
+         "Expenses Rank" = dense_rank(desc(`Total of Lost Expenses`)),
+         "Total Rank" = dense_rank((`Quantity Rank` + `Expenses Rank`) / 2)) %>%
+  arrange(`Total Rank`) %>%
+  relocate(`Quantity Rank`, .after = `Total Quantity Cancelled`)
+```
+
+or we could subtract the cancelled values from the confirmed ones,
+
+```{r}
+df %>%
+  mutate(Expense = Quantity * Price) %>%
+  group_by(CustomerID) %>%
+  summarise("Number of Invoices" = n_distinct(Invoice),
+            "Number of Cancelled Invoices" = n_distinct(Invoice[Quantity < 0]),
+            "Total Quantity Purchased" = sum(Quantity[Quantity > 0]),
+            "Total Quantity Cancelled" = abs(sum(Quantity[Quantity < 0])),
+            "Total of Expenses" = round(sum(Expense[Quantity > 0]), 2),
+            "Total of Lost Expenses" = round(abs(sum(Expense[Quantity < 0])), 2)) %>%
+  arrange(desc(`Number of Invoices`))
+```
+
+to show the net values.
+
+```{r}
+df %>%
+  mutate(Expense = Quantity * Price) %>%
+  group_by(CustomerID) %>%
+  summarise("Number of Invoices" = n_distinct(Invoice),
+            "Number of Cancelled Invoices" = n_distinct(Invoice[Quantity < 0]),
+            "Total Quantity Purchased" = sum(Quantity[Quantity > 0]),
+            "Total Quantity Cancelled" = abs(sum(Quantity[Quantity < 0])),
+            "Total of Expenses" = sum(Expense[Quantity > 0]),
+            "Total of Lost Expenses" = abs(sum(Expense[Quantity < 0]))) %>%
+  mutate(CustomerID = CustomerID,
+         "Number of Invoices" = `Number of Invoices`,
+         "Number of Cancelled Invoices" = `Number of Cancelled Invoices`,
+         "Total Net Quantity" = `Total Quantity Purchased` - `Total Quantity Cancelled`,
+         "Quantity Rank" = dense_rank(desc(`Total Net Quantity`)),
+         "Total Net Expenses" = round(`Total of Expenses` - `Total of Lost Expenses`, 2),
+         "Expenses Rank" = dense_rank(desc(`Total Net Expenses`)),
+         "Total Rank" = dense_rank((`Quantity Rank` + `Expenses Rank`) / 2), .keep = "none") %>%
+  arrange(`Total Rank`)
+```
+
+<br>
+
+# - *monthly expenses and invoices*
+
+We can then combine how much a client spends and how frequently by constructing a table that shows, for each client, the monthly expenses together with some summary metrics like their total, the percentage over the global, the monthly average and the number of months without a purchase.   
+
+```{r}
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  mutate(Expense = Quantity * Price,
+         Month = format(InvoiceDate, "%y/%m")) %>%
+  group_by(CustomerID, Month) %>%
+  summarise("Total Expenses" = sum(Expense), .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = Month, values_from = `Total Expenses`, names_sort = TRUE)  %>%
+  mutate("Total Expenses" = round(rowSums(across(where(is.numeric)), na.rm = TRUE), 2),
+         "Percentage over Global" = formattable::percent(`Total Expenses` / sum(`Total Expenses`)),
+         "Rounded Monthly Average" = round(rowMeans(across(where(is.numeric)), na.rm = TRUE), 2),
+         "Number of Missing Months" = rowSums(is.na(pick(everything()))), .after = "CustomerID") %>%
+  arrange(desc(`Total Expenses`))
+```
+
+<br>
+
+We can also build a similar table also for the number of invoices.
+
+```{r}
+df %>%
+  filter(!str_starts(Invoice, "C")) %>%
+  mutate(Month = format(InvoiceDate, "%y/%m")) %>%
+  group_by(CustomerID, Month) %>%
+  summarise("Number of Invoices" = n_distinct(Invoice), .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = Month, values_from = `Number of Invoices`, names_sort = TRUE)  %>%
+  mutate("Number of Invoices" = rowSums(across(where(is.numeric)), na.rm = TRUE),
+         "Rounded Monthly Average" = round(rowMeans(across(where(is.numeric)), na.rm = TRUE), 2),
+         "Number of Missing Months" = rowSums(is.na(pick(everything()))), .after = "CustomerID") %>%
+  arrange(desc(`Number of Invoices`))
+```
+
+<br>
+
+# - *main takeaways*
+
+In this document customers are analyzed and ranked following different criteria; we singled out the ones that cancels the most, where most of them are located and the best performing ones in regard to, among other metrics, number of items purchased or total revenues generated.

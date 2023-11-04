@@ -1,0 +1,131 @@
+---
+title: ""
+output: 
+  html_document: 
+    df_print: paged
+    code_folding: hide
+---
+
+```{r, include = FALSE}
+library(readxl)
+df <- read_excel(here::here("online_retail_II.xlsx"))
+library(dplyr)
+library(stringr)
+df <- df %>%
+  filter(str_length(StockCode) == 5 |
+           str_detect(StockCode, "^\\d{5}[a-zA-Z]{1,2}$") |
+           str_detect(StockCode, "PADS|DCGS|SP|gift")) %>%
+  filter(Price != 0) %>%
+  mutate(CustomerID = as.character(`Customer ID`),
+         Country = na_if(Country, "Unspecified"), .keep = "unused", .after = Price)
+```
+
+Cancellations of invoices is a practice that we want to limit, as it can impact revenues and can produce operational difficulties.   
+In this document we will try to understand when a cancellation takes place, using a machine learning technique called decision tree.
+
+# - *pre-validation of the analysis* 
+ 
+As [previously seen](https://pykaalexandro.github.io/An-Online-Retailer-Investigation/Investigating_Invoices.html#-_basic_breakdown), the cancellation rate for our cleaned data frame is `16.64%`, meaning that almost `1` out of `5` invoices is being cancelled.
+
+```{r}
+df %>%
+  mutate(Status = if_else(str_starts(Invoice, "C"), "Cancelled", "Confirmed")) %>%
+  group_by(Status) %>%
+  summarize("Number of Distinct Invoices" = n_distinct(Invoice)) %>%
+  mutate(Percentage = formattable::percent(`Number of Distinct Invoices` / sum(`Number of Distinct Invoices`))) %>%
+  arrange(desc(`Number of Distinct Invoices`))
+```
+
+<br>
+
+From a sales and operations point of view, it being a big or small number depends on various internal factors, but for the sake of this analysis it can cause some problems as the number of cancellations can be so small, compared to the confirmations, that the algorithm is not able to "learn" their characteristics, thus providing erroneous results.
+
+To assess that we can use some graphical methods, but first let's present the data frame we will feed into the algorithm:
+
+```{r}
+(treedf <- df %>%
+  group_by(Invoice) %>%
+  summarise("Number of Distinct Stock Codes" = n_distinct(StockCode),
+            "Median Quantity" = median(abs(Quantity)),
+            "Median Price" = median(Price),
+            "Total Quantity" = sum(abs(Quantity)),
+            "Total Revenues" = sum(abs(Quantity) * Price)) %>%
+  left_join(df %>%
+              mutate(Cancellation = factor(if_else(str_starts(Invoice, "C"), TRUE, FALSE))) %>%
+              distinct(Invoice, Cancellation), by = "Invoice"))
+```
+
+So, for every `Invoice`, we have quantitative information plus a binary column that deemed if it has been cancelled or not.
+
+
+From this next series of graphics we can assess on whether the metrics we chose are appropriate: a metric is appropriate when the distribution of values between the statuses `Cancellation FALSE` and `Cancellation TRUE` is distinct, in this way the algorithm can use it to distinguish the two.
+
+```{r, message = FALSE}
+library(sm)
+"Number of Distinct Stock Codes" <- treedf$`Number of Distinct Stock Codes`
+sm.density.compare(`Number of Distinct Stock Codes`, treedf$Cancellation, col = c("black", "darkgrey"))
+legend("topright", levels(treedf$Cancellation), lty = c(1, 2), col = c("black", "darkgrey"))
+"Median Quantity" <- treedf$`Median Quantity`
+sm.density.compare(`Median Quantity`, treedf$Cancellation, col = c("black", "darkgrey"))
+legend("topright", levels(treedf$Cancellation), lty = c(1, 2), col = c("black", "darkgrey"))
+"Median Price" <- treedf$`Median Price`
+sm.density.compare(`Median Price`, treedf$Cancellation, col = c("black", "darkgrey"))
+legend("topright", levels(treedf$Cancellation), lty = c(1, 2), col = c("black", "darkgrey"))
+"Total Quantity" <- treedf$`Total Quantity`
+sm.density.compare(`Total Quantity`, treedf$Cancellation, col = c("black", "darkgrey"))
+legend("topright", levels(treedf$Cancellation), lty = c(1, 2), col = c("black", "darkgrey"))
+"Total Revenues" <- treedf$`Total Revenues`
+sm.density.compare(`Total Revenues`, treedf$Cancellation, col = c("black", "darkgrey"))
+legend("topright", levels(treedf$Cancellation), lty = c(1, 2), col = c("black", "darkgrey"))
+```
+
+From the metrics we chose, it seems that only `Number of Distinct Items` and `Total Revenues` provide two sufficiently distinct curves.
+
+<br>
+
+# - *running the model*
+ 
+After those preliminary considerations, let's run the model.
+
+```{r, comment = ""}
+library(rpart)
+model<- rpart(Cancellation ~ ., data = treedf[-1])
+printcp(model)
+```
+
+The model returned two metrics that can influence the cancellations: `Number of Distinct Stock Codes` and `Total Quantity`.
+
+We can investigate how these metrics affect cancellations in the following table: for example `70%` of the invoices with a `Total Quantity` lower than `10` and a `Number of Distinct Stock Codes` less than `6` have been cancelled.
+
+```{r, paged.print = FALSE, comment = ""}
+library(rpart.plot)
+rpart.rules(model, style = "tall") 
+```
+
+<br>
+
+One of the perks of this method is the possibility to plot the decision tree itself, 
+
+```{r}
+rpart.plot(model, box.palette = 0)
+```
+
+and that really helps in communicating the results.
+
+In the plotted tree, its every node (meaning where the separations happen) and leaf (the terminal nodes, with no separations) contain information about:
+
+ - the majority of statuses present (`FALSE` for the first node, meaning the whole data set)
+ - the percentage of `Cancellation TRUE` (`0.17`, rounded, for the first node, as noted at the beginning of this document)
+ - the percentage of invoices present in the node (thus `100%` for the first one).
+
+So the algorithm didn't find perfect separations between the two cases as there are, for example in the leftmost leaf, `4%` of invoices still being cancelled despite having a `Total Quantity` higher than `16`.
+
+<br>
+
+# - *main takeaways and further developments*
+
+This basic demonstration of a decision tree yielded the results that small invoices are more likely to be cancelled.
+
+To progress this analysis we can start by modifying the parameters of the algorithm from the standard ones, then changing the metrics (for example by adding chronological and/or geographical ones) or running more models on the different subsets of [customers](https://pykaalexandro.github.io/An-Online-Retailer-Investigation/Investigating_Customers.html#-_cancelling_customers) and [countries](https://pykaalexandro.github.io/An-Online-Retailer-Investigation/Investigating_Invoices.html#-_country_breakdown) we discovered in previous documents.
+
+When we are satisfied with the model, we can test its reliability by applying it on future invoices, to estimate their probability of being cancelled.

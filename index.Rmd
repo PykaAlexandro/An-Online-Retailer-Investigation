@@ -1,0 +1,113 @@
+---
+title: ""
+author: ""
+date: ""
+output: 
+  html_document
+---
+
+```{r, include = FALSE}
+library(readxl)
+df <- read_excel(here::here("online_retail_II.xlsx"))
+```
+
+# - *MOTIVATION & SITE ORGANIZATION*
+
+This site was conceived as a way to ease my job search as a `Data Analyst`, both for me to show my skills and the tasks I am more interested to perform and for the recruiters to evaluate my competences and how I reason to assess my fit inside their organization.
+
+I therefore took a data frame from the web and I analyzed it as I would do in a working environment, organizing the site into three different subsequent parts that build on each other.
+
+# - *INTENDED AUDIENCE*
+
+People with vastly different skills can be actors in a recruitment process, and I want this site to be accessible to everybody, hence the choices of limiting technical vocabulary and of hiding the code by default (bar for a specific section of a document).  
+Notwithstanding, certain pieces can be not very interesting for non technical people, I am thinking first and foremost of the `Data Wrangling` pages, and a basic knowledge of data visualization (probability distributions, histograms and box plots) is required.
+
+# - *VISUAL PRESENTATION*
+
+About the site's visual presentation, I kept it simple and clean, also because I didn't nor don't want to spend too much time on it. I find it pleasant to read nonetheless but YMMV of course. I also didn't test the site on various platforms, just on a Chrome browser running on a Windows machine.
+
+All the graphs are in b/w, as, after toying for a little with colorblind-friendly palettes, I deemed it the most elegant and easiest solution to adopt.
+
+# - *EXPOSITION STYLE*
+
+I kept the exposition style that I had in my most recent position, where I was doing online presentations several times a week.   
+The audience mainly consisted of domain experts non trained in the R programming language or into machine learning techniques, but all of them had engineering backgrounds and/or coding experience. During that time, I never took anything for granted though, i.e. I briefly explained box plots the first time I used them for instance.
+
+For this site I tried to keep the singular pages short not to overload with information, with the general idea that every one of them can be processed also at the end of a rather heavy working day. The limit I imposed myself was .Rmd files of 300 lines, but that was not always respected, especially for the `Data Wrangling` pages (the outliers ones in particular) as I preferred to provide comprehensive analyses.
+
+# - *CODING CHOICES*
+
+The way I name variables is not an accepted standard, because they are meant to look pleasant in the outputted tables.
+
+Likewise, I do not load all the packages at the beginning of the script as common practice dictates but just before I use a function from them. It is a personal pet peeve, as when I was first learning to code I didn't like to not know what function belonged to what package. This is anyway not very consistent, for example I sometimes use the package::function() syntax as well, and it is something that can be easily corrected, if required.  
+The packages I used are very few and very common anyway.
+
+In the same way I like to comment after the code, as I see comments like subtitles that can help its comprehension. Using them before takes away the attention from the code itself in my opinion.   
+I did not comment much in any case, as I find most of the code here rather basic and easy to understand.
+
+Case in point, I could have initialized a function for many similar blocks of code applied to different columns, but I decided against it to keep the code as simple as possible.
+
+I also decided to present static tables, and not dynamic ones like the following,
+
+<br>
+
+```{r, echo = FALSE, message = FALSE}
+library(dplyr)
+DT::datatable(df %>%
+                count(StockCode, Description, sort = TRUE, name = "Number of Occurrences"),
+              filter = list(position = 'top', clear = FALSE))
+```
+
+deeming unnecessary the highest requirements in terms of space and computing power for the purely demonstrative objectives of this site.
+
+For the same reason, the tables are not downloadable.
+
+# - *THE DATA FRAME*
+
+The data frame was first retrieved, on the 1st of September 2022, from https://archive.ics.uci.edu/ml/datasets/Online+Retail+II.   
+It was chosen between several candidates, but not too much thought was given to the selection process.
+
+# - *FOR THE RECRUITERS*
+
+## - *basic info*
+
+I chose a data frame from the retail industry, as it is the one I know better thanks to my studies, working experiences and personal inclinations.
+
+I am interested in professional opportunities also in other fields though, especially the ones that concern people behaviors, as I find fascinating to investigate them, not excluding at all pursuits in, broadly speaking, humanitarian organizations.
+
+Economic satisfaction is not my main goal, a healthy life/work balance is what I strive to achieve the most.
+
+I am currently in mainland Europe, but I am willing to relocate anywhere in the world.   
+My only strong objection would be the local climate, as the rigid one was the reason I quit my previous job in Paris.
+
+## - *my proficiencies and interests*
+
+`Introduction & Data Wrangling` contains mandatory preliminary operations. They are not the most glamorous tasks but I find morbidly satisfying to discover errors and inconsistencies, feeling as well I possess the attention to detail and meticulousness necessary to prepare data frames for further work. Always interested in learning more advanced techniques.   
+Given its nature, this section is the most conclusive one.
+
+`Extracting Insights` it is what I enjoy the most to do, to interrogate the data frame like it is a culprit to squeeze of valuable information, and then presenting the results to decision makers in a clear and concise manner. It is in my opinion the main activity for a Data Analyst and I fit right into it. Eager to improve my effectiveness and my level of sophistication to be of more value to the firm.
+
+The last section, `Advanced Inquiries`, doesn't differ a lot in spirit from the second one, just the tools are different as they consist of more advanced statistical and algorithmic methods. I have a lot of interest in these as well, given the insights they can provide is vastly superior to basic rows and columns manipulations.   
+In this site I offered a small sample of quick expositions of the ones more easily applied to the data frame in exam, but I also have working experience with linear regression and of several supervised machine learning models.   
+I'm furthermore interested in recommendation engines, A/B testing, operations research and in general in using Data Analysis to investigate logistics & transportation problems.   
+
+## - *about myself*
+
+I consider myself a good learner, my path in the Data Science field might attest to that, and also the fact that after a short time I was able to work in French despite having never studied it before hand (being Italian probably helped though).
+
+Beside those two languages, I am proficient in English, I feel this site suffices as proof, and I speak Portuguese and Danish as well. I am very rusty in the latter, plus I don't see working opportunities that will make me refresh my knowledge of it. On the contrary I would be very pleased if I can use Portuguese in a professional capacity.
+
+I usually worked alone in my previous experiences, so you can say that I am autonomous, organized and dependable, but at the same time I lack familiarity with the practices of a modern Data Science team.
+
+## - *career developments*
+
+My main objective is to become a better Data Analyst.   
+About transitioning to different roles, I can see myself becoming a Data Scientist, if I manage to acquire the command of more in deep statistical and mathematical techniques, while that is not true for a Data Engineer position, as the related IT skills are less enticing for me to study.
+
+# - *CONTACTS INFORMATION*
+
+Linkedin is the best way to contact me, also for comment, questions or critiques about the site itself.
+
+<br>
+
+Thanks for your time.
