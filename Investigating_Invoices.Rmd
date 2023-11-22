@@ -165,7 +165,7 @@ The same `Max`. value for both statuses piqued our interest and we found out tha
 ```{r}
 df %>%
   filter(Invoice %in% c("C524235", "518505", "524174")) %>%
-  count(Invoice, wt = abs(Quantity), Name = "Total Quantity")
+  count(Invoice, wt = abs(Quantity), name = "Total Quantity")
 ```
 
 It is not by chance that it happened, as all three contain the same items in the same quantities and two of them are made by the same customer, very curious.
