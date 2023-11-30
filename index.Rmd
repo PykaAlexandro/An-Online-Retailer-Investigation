@@ -31,7 +31,7 @@ All the graphs are in b/w, as, after toying for a little with colorblind-friendl
 # - *EXPOSITION STYLE*
 
 I kept the exposition style that I had in my most recent position, where I was doing online presentations several times a week.   
-The audience mainly consisted of domain experts non trained in the R programming language or into machine learning techniques, but all of them had engineering backgrounds and/or coding experience. During that time, I never took anything for granted though, i.e. I briefly explained box plots the first time I used them for instance.
+The audience mainly consisted of domain experts not trained in the R programming language or into machine learning techniques, but all of them had engineering backgrounds and/or coding experience. During that time, I never took anything for granted though, i.e. I briefly explained box plots the first time I used them for instance.
 
 For this site I tried to keep the singular pages short not to overload with information, with the general idea that every one of them can be processed also at the end of a rather heavy working day. The limit I imposed myself was .Rmd files of 300 lines, but that was not always respected, especially for the `Data Wrangling` pages (the outliers ones in particular) as I preferred to provide comprehensive analyses.
 
@@ -89,7 +89,7 @@ Given its nature, this section is the most conclusive one.
 
 The last section, `Advanced Inquiries`, doesn't differ a lot in spirit from the second one, just the tools are different as they consist of more advanced statistical and algorithmic methods. I have a lot of interest in these as well, given the insights they can provide is vastly superior to basic rows and columns manipulations.   
 In this site I offered a small sample of quick expositions of the ones more easily applied to the data frame in exam, but I also have working experience with linear regression and of several supervised machine learning models.   
-I'm furthermore interested in recommendation engines, A/B testing, operations research and in general in using Data Analysis to investigate logistics & transportation problems.   
+I'm furthermore interested in recommendation engines, A/B testing, operations research and in general in using Data Analysis to investigate logistics & transportation problems.
 
 ## - *about myself*
 
@@ -106,7 +106,7 @@ About transitioning to different roles, I can see myself becoming a Data Scienti
 
 # - *CONTACTS INFORMATION*
 
-Linkedin is the best way to contact me, also for comment, questions or critiques about the site itself.
+Linkedin is the best way to contact me, also for comments, questions or critiques about the site itself.
 
 <br>
 
