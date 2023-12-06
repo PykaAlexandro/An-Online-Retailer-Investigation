@@ -30,7 +30,7 @@ All the graphs are in b/w, as, after toying for a little with colorblind-friendl
 
 # - *EXPOSITION STYLE*
 
-I kept the exposition style that I had in my most recent position, where I was doing online presentations several times a week.   
+I kept the exposition style that I had in my most recent position, where I was doing remote presentations several times a week.   
 The audience mainly consisted of domain experts not trained in the R programming language or into machine learning techniques, but all of them had engineering backgrounds and/or coding experience. During that time, I never took anything for granted though, i.e. I briefly explained box plots the first time I used them for instance.
 
 For this site I tried to keep the singular pages short not to overload with information, with the general idea that every one of them can be processed also at the end of a rather heavy working day. The limit I imposed myself was .Rmd files of 300 lines, but that was not always respected, especially for the `Data Wrangling` pages (the outliers ones in particular) as I preferred to provide comprehensive analyses.
