@@ -15,7 +15,7 @@ In this document we will present the data frame used throughout this site, with 
 
 <br>
 
-# - *source and description*
+# - *source and structure*
 
 The data frame was first retrieved, on the 1st of September 2022, from https://archive.ics.uci.edu/ml/datasets/Online+Retail+II and its description states that
 
@@ -158,7 +158,7 @@ df %>%
 > "Product (item) name. Nominal."
 
 <br>
-and there are ``r length(unique(df$Description))``  distinct ones, a number different from the distinct stock codes (when instead they should be equal), owing to multiple descriptions for each one of them, as we've seen a little above. 
+and there are ``r length(unique(df$Description))``  distinct ones, a number different from the distinct stock codes (when instead they should be equal), owing to multiple descriptions for some of them, as we've seen a little above. 
 
 ```{r}
 kable(df %>%

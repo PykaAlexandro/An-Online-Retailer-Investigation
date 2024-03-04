@@ -519,8 +519,8 @@ div.tocify {
 site, with the mean to have a first understanding of its structure and
 characteristics.</p>
 <p><br></p>
-<div id="source-and-description" class="section level1">
-<h1>- <em>source and description</em></h1>
+<div id="source-and-structure" class="section level1">
+<h1>- <em>source and structure</em></h1>
 <p>The data frame was first retrieved, on the 1st of September 2022,
 from <a href="https://archive.ics.uci.edu/ml/datasets/Online+Retail+II"
 class="uri">https://archive.ics.uci.edu/ml/datasets/Online+Retail+II</a>
@@ -697,8 +697,8 @@ though.</p>
 </blockquote>
 <p><br> and there are <code>4644</code> distinct ones, a number
 different from the distinct stock codes (when instead they should be
-equal), owing to multiple descriptions for each one of them, as we’ve
-seen a little above.</p>
+equal), owing to multiple descriptions for some of them, as we’ve seen a
+little above.</p>
 <div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(df <span class="sc">%&gt;%</span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>        <span class="fu">distinct</span>(Description) <span class="sc">%&gt;%</span></span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>        <span class="fu">tally</span>(<span class="at">name =</span> <span class="st">&quot;Number of Distinct Descriptions&quot;</span>), <span class="at">align =</span> <span class="st">&quot;l&quot;</span>)</span></code></pre></div>
