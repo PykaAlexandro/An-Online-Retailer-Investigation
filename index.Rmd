@@ -88,7 +88,7 @@ Given its nature, this section is the most conclusive one.
 `Extracting Insights` it is what I enjoy the most to do, to interrogate the data frame like it is a culprit to squeeze of valuable information, and then presenting the results to decision makers in a clear and concise manner. It is in my opinion the main activity for a Data Analyst and I fit right into it. Eager to improve my effectiveness and my level of sophistication to be of more value to the firm.
 
 The last section, `Advanced Inquiries`, doesn't differ a lot in spirit from the second one, just the tools are different as they consist of more advanced statistical and algorithmic methods. I have a lot of interest in these as well, given the insights they can provide is vastly superior to basic rows and columns manipulations.   
-In this site I offered a small sample of quick expositions of the ones more easily applied to the data frame in exam, but I also have working experience with linear regression and of several supervised machine learning models.   
+In this site I offered a small sample of quick expositions of the ones more easily applied to the data frame in exam, but I also have working experience with linear regression and of several classification models.   
 I'm furthermore interested in recommendation engines, A/B testing, operations research and in general in using Data Analysis to investigate logistics & transportation problems.
 
 ## - *about myself*
