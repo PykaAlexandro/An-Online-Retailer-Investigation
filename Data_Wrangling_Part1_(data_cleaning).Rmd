@@ -90,6 +90,16 @@ df %>%
   count("Negative Quantity" = if_else(Quantity < 0, "Yes", "No"))
 ```
 
+The negative values pertain to cancelled invoices while the positive ones to confirmed ones.
+
+```{r}
+df %>% 
+  filter(StockCode == "D") %>%
+  count("Negative Quantity" = if_else(Quantity < 0, "Yes", "No"),
+        Status = if_else(str_starts(Invoice, "C"), "Cancelled", "Confirmed")
+        , name = "Number of Invoices")
+```
+
 <br>
 
 Overall there are `90` invoices, `85` cancelled and `5` confirmed, with at least one row with `StockCode` equal to `D`,
@@ -121,8 +131,7 @@ df %>%
 df %>% 
   group_by(Invoice) %>%
   filter(any(StockCode == "D")) %>%
-  ungroup() %>%
-  count(Invoice, name = "Number of Items") %>%
+  summarise("Number of Items" = n()) %>%
   count(`Number of Items`, sort = TRUE, name = "Number of Occurrences")
 ```
 
@@ -328,6 +337,19 @@ df %>%
 
 <br>
 
+Furthermore, also amongst the stock code with only one description we experience some issues, like `NAs` values and notes.
+
+```{r}
+df %>%
+  count(StockCode, Description, name = "Number of Occurrences") %>%
+  group_by(StockCode) %>%
+  filter(n() == 1 &
+           (is.na(Description) |
+              str_detect(Description, "[:lower:]")))
+```
+
+<br>
+
 We can also encounter the same description pertaining to different stock codes; some they just differ in style
 
 ```{r}
@@ -454,7 +476,7 @@ df %>%
 
 <br>
 
-There are no quantity values equal to `0`,
+There are no values equal to `0`,
 
 ```{r}
 kable(df %>%
@@ -462,7 +484,7 @@ kable(df %>%
         tally(name = "Number of Rows with 0 Quantity"), align = "l")
 ```
 
-and no invoices with both positive and negative values of `Quantity`.
+and no invoices with both positive and negative ones.
 
 ```{r}
 kable(df %>%
@@ -497,7 +519,7 @@ ggplot(gaps, aes(`Missing Days`, 5)) +
 There is a large sequence of missing days around `Christmas 2009` and a smaller one at the beginning of `April 2010` (Easter fell on the `4th of April` that year) but those are not the only ones missing.
 
 ```{r}
-tibble("Missing Days" = date_range[!date_range %in% as.Date(df$InvoiceDate)], 
+tibble("Missing Day" = date_range[!date_range %in% as.Date(df$InvoiceDate)], 
        "Day of the Week" = weekdays(date_range[!date_range %in% as.Date(df$InvoiceDate)]))
 ```
 
@@ -513,7 +535,7 @@ tibble("Missing Days" = date_range[!date_range %in% as.Date(df$InvoiceDate)],
 
 <br>
 
-I was expecting `Sundays` to be honest given that the clientele is mostly `UK` based. There might be other factors at play here given the nature of the business.
+I was expecting `Sunday` to be honest given that the clientele is mostly `UK` based. There might be other factors at play here given the nature of the business.
 
 <br>
 
@@ -622,7 +644,6 @@ We noticed in the previous document the value `Unspecified` for `15` invoices an
 
 ```{r}
 df %>%
-  distinct(Invoice, CustomerID, Country) %>%
   filter(Country == "Unspecified") %>%
   distinct(Country, Invoice, CustomerID) %>%
   arrange(desc(CustomerID))
@@ -637,7 +658,7 @@ Let's recap our findings:
 - Invoices starting with a letter different than `C`  
 - Stock codes not pertaining to actual transactions  
 - A `D` (`Discount`) stock code that doesn't provide valuable information  
-- A `Description` column with several values (`NAs`, typos, updated descriptions or notes) for the same stock code, the same description assigned to different stock codes  
+- A `Description` column with several values (`NAs`, typos, updated descriptions or notes) for the same stock code, uninformative unique descriptions (`NAs`, notes) for others, the same description assigned to different stock codes  
 - `2121` non cancelled invoices with a negative value in the `Quantity` column, all with the same value in the `Price` (`0`), `CustomerID` (`NA`) and `Country` (`United Kingdom`) columns, most likely inventory adjustments. `1` cancelled invoice with a positive value in the `Quantity` column  
 - Unexpected gaps in the time frame  
 - `3` rows with a negative price (the same as the ones with invoices starting with a letter different than `C`). `3687` rows with price equal to `0`, a set composed of rows with a negative (`2121` rows) and with a positive (`1566`) value in the `Quantity` column 
