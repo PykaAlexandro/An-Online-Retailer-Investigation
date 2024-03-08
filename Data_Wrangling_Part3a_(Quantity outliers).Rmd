@@ -78,7 +78,7 @@ for that set of values.
 
 <br>
 
-We will use this method for defining outliers as it is the most used in statistics, but with some business knowledge we could use as well more specifics values as cutoff points, like thresholds determined by how many items can fit into a box, the number of items by which the transportation costs increase and so on and so forth.
+We will use this method for defining outliers as it is the most used in statistics, but with some business knowledge we could use as well more specific values as cutoff points, like thresholds determined by how many items can fit into a box, the number of items by which the transportation costs increase and so on and so forth.
 
 <br>
 
@@ -229,7 +229,7 @@ df_outlier %>%
 
 <br>
 
-We can move to customers now, to identify the ones that buys in high quantities more often,
+We can move to customers now, to identify the ones that buy in high quantities more often,
 
 ```{r}
 df_outlier %>%
@@ -357,15 +357,15 @@ df_outlier %>%
 It is interesting that the value of `2.10` returns from a [previous table](#previous table), and in fact the distribution of values between the two sets is very similar
 
 ```{r}
-bind_cols(df_outlier %>%
-            mutate("Upper Outlier" = if_else(Quantity > `Quantity Upper Bound`, TRUE, FALSE),
-                   "Unitary Quantity" = if_else(Quantity == 1, TRUE, FALSE)) %>%
-            group_by(StockCode, Description) %>%
-            mutate("Percentage of Upper Outliers" = mean(`Upper Outlier`),
-                   "Percentage of Unitary Quantity Purchases" = mean(`Unitary Quantity`)) %>%
-            ungroup() %>%
-            reframe("Not 100% Upper Outliers" = summary(Price[`Percentage of Upper Outliers` != 1]),
-                    "Not 100% Unitary Purchases" = summary(Price[`Percentage of Unitary Quantity Purchases` != 1]))) %>%
+df_outlier %>%
+  mutate("Upper Outlier" = if_else(Quantity > `Quantity Upper Bound`, TRUE, FALSE),
+         "Unitary Quantity" = if_else(Quantity == 1, TRUE, FALSE)) %>%
+  group_by(StockCode, Description) %>%
+  mutate("Percentage of Upper Outliers" = mean(`Upper Outlier`),
+         "Percentage of Unitary Quantity Purchases" = mean(`Unitary Quantity`)) %>%
+  ungroup() %>%
+  reframe("Not 100% Upper Outliers" = summary(Price[`Percentage of Upper Outliers` != 1]),
+          "Not 100% Unitary Purchases" = summary(Price[`Percentage of Unitary Quantity Purchases` != 1])) %>%
   mutate("Statistic" = c("Min." , "1st Qu.", "Median", "Mean", "3rd Qu.", "Max."), .before = `Not 100% Upper Outliers`)
 ```
 
