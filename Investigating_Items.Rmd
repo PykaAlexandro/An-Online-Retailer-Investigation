@@ -337,4 +337,4 @@ df %>%
 
 # - *main takeaways*
 
-We produced various tables that can be explored to gain insights on what items perform best for certain common metrics like the most commonly sold and the ones yielding highest revenues. The problematic phenomenon of cancellation has also been examined, together with a breakdown by countries.
+We produced various tables that can be explored further to gain insights on what items perform best for certain common metrics like the most commonly sold and the ones yielding highest revenues. The problematic phenomenon of cancellations has also been examined, together with a breakdown by countries.
