@@ -164,7 +164,7 @@ df %>%
 # - *cancelling customers*
 
 The phenomenon of cancelling invoices is strictly related to the customers, as they are the ones responsible for that, so it is important to study it in regards to them.
-Let's start with a breakdown differentiating by status and ordered by the clients invoiced the most.
+Let's start with a breakdown differentiating by status and ordered by the clients that invoiced the most.
 
 ```{r}
 df %>%
@@ -177,7 +177,7 @@ df %>%
   arrange(desc(`Total Number Invoices`), CustomerID, desc(`Invoice Status`))
 ```
 
-So we can isolate which ones never cancelled an order (`2626` out of `4314`).
+Then we can isolate which ones never cancelled an order (`2626` out of `4314`),
 
 ```{r}
 df %>%
@@ -191,7 +191,7 @@ df %>%
            Percentage == 1)
 ```
 
-The ones that always cancel orders (`29` out of `4314`).
+the ones that always cancel orders (`29` out of `4314`)
 
 ```{r}
 df %>%
@@ -205,7 +205,7 @@ df %>%
            Percentage == 1)
 ```
 
-And the third group, that orders and cancels both (`1659` out of `4314`), that can be filtered further by determining a threshold for the rate of cancellation.
+and the third group, that orders and cancels both (`1659` out of `4314`), that can be filtered further by determining a threshold for the rate of cancellation for example.
 
 ```{r}
 df %>%
@@ -224,7 +224,7 @@ df %>%
 
 # - *ranking the customers*
 
-Let’s continue with some more interesting information (excluding the cancelled invoices from these tables) about their spending capabilities, like the clients that purchased the most in term of quantity
+Let’s continue with some more interesting information about their spending capabilities (excluding the cancelled invoices from these tables), like the clients that purchased the most in term of quantity
 
 ```{r}
 df %>%
