@@ -538,8 +538,10 @@ generally positive upward trend.</p>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">&quot;bottom&quot;</span>, </span>
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.title =</span> <span class="fu">element_blank</span>())</span></code></pre></div>
 <p><img src="Analyzing_Sales_Trends_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
-<p>To investigate further, we can at first show the distribution of
-values, to assess the magnitude of variations.</p>
+<p>Of course that could only be a seasonal effect, with higher sales
+volumes determined by the end of the year holiday period.</p>
+<p>Anyway, to investigate further, we can at first show the distribution
+of values, to assess the magnitude of variations.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>df <span class="sc">%&gt;%</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">str_starts</span>(Invoice, <span class="st">&quot;C&quot;</span>)) <span class="sc">%&gt;%</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">InvoiceDay =</span> <span class="fu">as.Date</span>(InvoiceDate)) <span class="sc">%&gt;%</span></span>
@@ -579,7 +581,7 @@ remainder, that added together would sum up to the initial curve.</p>
 we can think of it as “noise”, variations around the trend. More
 interesting is that it didn’t return a seasonality, meaning that the
 retailer has no significant recurring highs or lows in sales over fixed
-chronological segments (like weeks or months).</p>
+chronological segments smaller that a year (like weeks or months).</p>
 <p>To correctly read the graph, it is important to notice that each
 component has its own scale.</p>
 <p>We can progress this analysis by choosing different parameters for
@@ -600,8 +602,8 @@ document</a>.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>df <span class="sc">%&gt;%</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">str_starts</span>(Invoice, <span class="st">&quot;C&quot;</span>) <span class="sc">&amp;</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>           StockCode <span class="sc">==</span> <span class="st">&quot;85123A&quot;</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Invoice_Day =</span> <span class="fu">as.Date</span>(InvoiceDate)) <span class="sc">%&gt;%</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Invoice_Day) <span class="sc">%&gt;%</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">InvoiceDay =</span> <span class="fu">as.Date</span>(InvoiceDate)) <span class="sc">%&gt;%</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(InvoiceDay) <span class="sc">%&gt;%</span></span>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="st">&quot;Daily Quantity&quot;</span> <span class="ot">=</span> <span class="fu">sum</span>(Quantity)) <span class="sc">%&gt;%</span></span>
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">reframe</span>(<span class="at">Value =</span> <span class="fu">summary</span>(<span class="st">`</span><span class="at">Daily Quantity</span><span class="st">`</span>)) <span class="sc">%&gt;%</span></span>
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Statistic =</span> <span class="fu">c</span>(<span class="st">&quot;Min.&quot;</span>, <span class="st">&quot;st1 Qu.&quot;</span>, <span class="st">&quot;Median&quot;</span>, <span class="st">&quot;Mean&quot;</span>, <span class="st">&quot;3rd Qu.&quot;</span>, <span class="st">&quot;Max&quot;</span>), <span class="at">.before =</span> Value)</span></code></pre></div>
@@ -817,8 +819,9 @@ though, and if we look at them we see that most are
   </script>
 </div>
 <p><br></p>
-<p>The number of stock codes never bought during those days is much
-larger (more than <code>1000</code>).</p>
+<p>The number of regularly bought stock codes never bought during those
+days is much larger (more than <code>1000</code>), meaning that the
+purchasing behavior is different than usual.</p>
 <div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>df <span class="sc">%&gt;%</span></span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">str_starts</span>(Invoice, <span class="st">&quot;C&quot;</span>) <span class="sc">&amp;</span></span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>           CustomerID <span class="sc">==</span> <span class="st">&quot;14911&quot;</span>) <span class="sc">%&gt;%</span></span>

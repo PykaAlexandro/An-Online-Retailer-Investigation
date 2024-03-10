@@ -44,7 +44,9 @@ df %>%
         legend.title = element_blank())
 ```
 
-To investigate further, we can at first show the distribution of values, to assess the magnitude of variations.
+Of course that could only be a seasonal effect, with higher sales volumes determined by the end of the year holiday period.
+
+Anyway, to investigate further, we can at first show the distribution of values, to assess the magnitude of variations.
 
 ```{r}
 df %>%
@@ -82,7 +84,7 @@ df %>%
 Here the decomposition returned two lines: the trend and the remainder, that added together would sum up to the initial curve.   
 
 The remainder is what the model can't assign to any other component; we can think of it as "noise", variations around the trend.
-More interesting is that it didn't return a seasonality, meaning that the retailer has no significant recurring highs or lows in sales over fixed chronological segments (like weeks or months).
+More interesting is that it didn't return a seasonality, meaning that the retailer has no significant recurring highs or lows in sales over fixed chronological segments smaller that a year (like weeks or months).
 
 To correctly read the graph, it is important to notice that each component has its own scale.
 
@@ -101,8 +103,8 @@ We can start with its distribution of quantities per day,
 df %>%
   filter(!str_starts(Invoice, "C") &
            StockCode == "85123A") %>%
-  mutate(Invoice_Day = as.Date(InvoiceDate)) %>%
-  group_by(Invoice_Day) %>%
+  mutate(InvoiceDay = as.Date(InvoiceDate)) %>%
+  group_by(InvoiceDay) %>%
   summarize("Daily Quantity" = sum(Quantity)) %>%
   reframe(Value = summary(`Daily Quantity`)) %>%
   mutate(Statistic = c("Min.", "st1 Qu.", "Median", "Mean", "3rd Qu.", "Max"), .before = Value)
@@ -321,7 +323,7 @@ df %>%
 
 <br>
 
-The number of stock codes never bought during those days is much larger (more than `1000`).
+The number of regularly bought stock codes never bought during those days is much larger (more than `1000`), meaning that the purchasing behavior is different than usual.
 
 ```{r}
 df %>%
