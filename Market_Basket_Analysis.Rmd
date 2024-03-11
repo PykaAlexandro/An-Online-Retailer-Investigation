@@ -55,8 +55,7 @@ In order to feed it into the algorithm, we need to change the data frame into a 
    distinct() %>%
    count(Invoice, StockCode) %>%
    mutate(n = TRUE) %>%
-   tidyr::pivot_wider(id_cols = Invoice, names_from = StockCode, values_from = n) %>%
-   mutate(across(where(is.logical), ~ coalesce(.x, FALSE))))
+   tidyr::pivot_wider(id_cols = Invoice, names_from = StockCode, values_from = n, values_fill = FALSE))
 ```
 ```{r, message = FALSE, results = "hide"}
 library(arules)
@@ -103,7 +102,7 @@ tibble(lhs = labels(lhs(rules)),
 
 as an example:
 
- - `support` is the percentage of times all stock codes of the rule occur together, so we get `0.1785714`	which is `10` invoices over `56`
+ - `support` is the percentage of times all stock codes of the rule occur together in the same invoice over the totality of invoices, so we get `0.1785714`	which is `10` / `56`
  
 ```{r}
 df %>%
@@ -227,7 +226,7 @@ df %>%
             "Median Price" = median(Price))
 ```
 
-that we can compare to the rest of the inventory, where we can see that they are cheaper
+that we can compare to the rest of the inventory, where we can see that they are generally cheaper
 
 ```{r}
 library(ggplot2)
