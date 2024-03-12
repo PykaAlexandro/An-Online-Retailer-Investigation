@@ -25,7 +25,7 @@ We will continue here, with a snappier exposition, in the same vein as in the pr
 ```{r}
 df %>%
   reframe(Value = summary(Price))  %>%
-  mutate(Statistic = c("Min.", "st1 Qu.", "Median", "Mean", "3rd Qu.", "Max"), .before = Value)
+  mutate(Statistic = c("Min.", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max"), .before = Value)
 ```
 
 <br>
