@@ -180,7 +180,7 @@ Looking at its distribution, we can see that most items are sold in small quanti
 ```{r}
 df %>%
   reframe(Value = summary(Quantity))  %>%
-  mutate(Statistic = c("Min.", "st1 Qu.", "Median", "Mean", "3rd Qu.", "Max"), .before = Value)
+  mutate(Statistic = c("Min.", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max"), .before = Value)
 library(ggplot2)
 ggplot(df, aes(Quantity, "")) +
   geom_boxplot() +
@@ -241,7 +241,7 @@ As per `Quantity`, we will take a look at its distribution.
 ```{r}
 df %>%
   reframe(Value = summary(Price))  %>%
-  mutate(Statistic = c("Min.", "st1 Qu.", "Median", "Mean", "3rd Qu.", "Max"), .before = Value)
+  mutate(Statistic = c("Min.", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max"), .before = Value)
 ggplot(df, aes(Price, "")) +
   geom_boxplot() +
   scale_x_continuous(trans = scales::modulus_trans(0.25)) + 
