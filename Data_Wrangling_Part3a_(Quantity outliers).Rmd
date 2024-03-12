@@ -32,7 +32,7 @@ We only have two numeric columns in our data frame, `Quantity` and `Price`, and 
 ```{r}
 df %>%
   reframe(across(where(is.numeric), ~ summary(.x)))  %>%
-  mutate(Statistic = c("Min.", "st1 Qu.", "Median", "Mean", "3rd Qu.", "Max"), .before = Quantity)
+  mutate(Statistic = c("Min.", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max"), .before = Quantity)
 ```
 
 <br>
@@ -40,7 +40,7 @@ df %>%
 One definition for an outlier is when its value it's either smaller/greater than the first/third quartile minus/plus `1.5` times the interquartile range.
 
 ```{r class.source = "fold-show", eval = FALSE}
-Lower Outliers < 1rd Quartile - 1.5 * (3rd Quartile - 1st Quartile)
+Lower Outliers < 1st Quartile - 1.5 * (3rd Quartile - 1st Quartile)
 Upper Outliers > 3rd Quartile + 1.5 * (3rd Quartile - 1st Quartile)
 ```
 
