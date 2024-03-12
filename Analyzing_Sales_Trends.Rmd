@@ -44,7 +44,7 @@ df %>%
         legend.title = element_blank())
 ```
 
-Of course that could only be a seasonal effect, with higher sales volumes determined by the end of the year holiday period.
+Of course that might be just a seasonal effect, with higher sales volumes determined by the end of the year holiday period.
 
 Anyway, to investigate further, we can at first show the distribution of values, to assess the magnitude of variations.
 
@@ -55,7 +55,7 @@ df %>%
   group_by(InvoiceDay) %>%
   summarise("Number of Invoices per Day" = n_distinct(Invoice)) %>%
   reframe(Value = summary(`Number of Invoices per Day`)) %>%
-  mutate(Statistic = c("Min.", "st1 Qu.", "Median", "Mean", "3rd Qu.", "Max"), .before = Value)
+  mutate(Statistic = c("Min.", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max"), .before = Value)
 ```
 
 <br>
@@ -94,10 +94,9 @@ We can progress this analysis by choosing different parameters for the model, to
 
 # - *analyzing a stock code*
 
-Instead of the overall sales, we can direct this kind of analysis also to a singular stock code.   
-We can take the most popular one, `85123A`, ascertained in a [previous document](https://pykaalexandro.github.io/An-Online-Retailer-Investigation/Investigating_Items.html#-_most_popular_items).
+Instead of the overall sales, we can direct this kind of analysis also to a singular stock code, for example the most popular one, `85123A`, as ascertained in a [previous document](https://pykaalexandro.github.io/An-Online-Retailer-Investigation/Investigating_Items.html#-_most_popular_items).
 
-We can start with its distribution of quantities per day,
+We can start with its distribution of confirmed quantities per day,
 
 ```{r}
 df %>%
@@ -107,7 +106,7 @@ df %>%
   group_by(InvoiceDay) %>%
   summarize("Daily Quantity" = sum(Quantity)) %>%
   reframe(Value = summary(`Daily Quantity`)) %>%
-  mutate(Statistic = c("Min.", "st1 Qu.", "Median", "Mean", "3rd Qu.", "Max"), .before = Value)
+  mutate(Statistic = c("Min.", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max"), .before = Value)
 ```
 
 then we plot the time series,
