@@ -371,9 +371,9 @@ These purchases are not very frequent, as this customer has usually several invo
 
 ```{r}
 df %>%
-  mutate(InvoiceDay = as.Date(InvoiceDate)) %>%
-  filter(CustomerID == "17850" &
+    filter(CustomerID == "17850" &
            StockCode == "82494L") %>%
+  mutate(InvoiceDay = as.Date(InvoiceDate)) %>%
   count(InvoiceDay, name = "Number of Invoices")
 ```
 
@@ -419,8 +419,7 @@ Returning to stock code `82494L`, we notice that, as the frequency of invoices d
 df %>%
   mutate(InvoiceDay = as.Date(InvoiceDate)) %>%
   filter(CustomerID == "17850" &
-           StockCode == "82494L" &
-           !str_starts(Invoice, "C")) %>%
+           StockCode == "82494L") %>%
   group_by(InvoiceDay) %>%
   summarise("Quantity per Day" = sum(Quantity)) %>%
   ggplot(aes(InvoiceDay, `Quantity per Day`)) + 
