@@ -754,11 +754,10 @@ codes.</p>
 <p>for <code>4</code> distinct stock codes:</p>
 <div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>df <span class="sc">%&gt;%</span></span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(StockCode <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;22551&quot;</span>, <span class="st">&quot;22554&quot;</span>, <span class="st">&quot;22629&quot;</span>, <span class="st">&quot;22630&quot;</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(StockCode, Description) <span class="sc">%&gt;%</span></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(StockCode))</span></code></pre></div>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(StockCode, Description)</span></code></pre></div>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["StockCode"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Description"],"name":[2],"type":["chr"],"align":["left"]}],"data":[{"1":"22630","2":"DOLLY GIRL LUNCH BOX"},{"1":"22629","2":"SPACEBOY LUNCH BOX"},{"1":"22554","2":"PLASTERS IN TIN WOODLAND ANIMALS"},{"1":"22551","2":"PLASTERS IN TIN SPACEBOY"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["StockCode"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Description"],"name":[2],"type":["chr"],"align":["left"]}],"data":[{"1":"22551","2":"PLASTERS IN TIN SPACEBOY"},{"1":"22554","2":"PLASTERS IN TIN WOODLAND ANIMALS"},{"1":"22629","2":"SPACEBOY LUNCH BOX"},{"1":"22630","2":"DOLLY GIRL LUNCH BOX"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <p><br></p>

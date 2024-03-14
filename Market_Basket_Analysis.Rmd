@@ -206,8 +206,7 @@ for `4` distinct stock codes:
 ```{r}
 df %>%
   filter(StockCode %in% c("22551", "22554", "22629", "22630")) %>%
-  distinct(StockCode, Description) %>%
-  arrange(desc(StockCode))
+  distinct(StockCode, Description)
 ``` 
 
 <br>
