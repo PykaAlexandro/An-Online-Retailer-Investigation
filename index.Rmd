@@ -15,7 +15,7 @@ df <- read_excel(here::here("online_retail_II.xlsx"))
 
 This site was conceived as a way to ease my job search as a `Data Analyst`, both for me to show my skills and the tasks I am more interested to perform and for the recruiters to evaluate my competences and how I reason to assess my fit inside their organization.
 
-I therefore took a data frame from the web and I analyzed it as I would do in a working environment, organizing the site into three different subsequent parts that build on each other.
+I therefore took a data frame from the web and I analyzed it as I would do in a working environment, organizing the site into three different subsequent parts that build on each other, plus a recently added dashboards section that presents some of the findings of the other ones.
 
 # - *INTENDED AUDIENCE*
 
@@ -24,9 +24,11 @@ Notwithstanding, certain pieces can be not very interesting for non technical pe
 
 # - *VISUAL PRESENTATION*
 
-About the site's visual presentation, I kept it simple and clean, also because I didn't nor don't want to spend too much time on it. I find it pleasant to read nonetheless but YMMV of course. I also didn't test the site on various platforms, just on a Chrome browser running on a Windows machine.
+About the site's visual presentation, I kept it simple and clean, also because I didn't nor don't want to spend too much time on it. I find it pleasant enough nonetheless but YMMV of course. I also didn't test the site on various platforms, just on a Chrome browser running on a Windows machine.
 
-All the graphs are in b/w, as, after toying for a little with colorblind-friendly palettes, I deemed it the most elegant and easiest solution to adopt.
+All the graphs are in b/w, as, after toying for a little while with colorblind-friendly palettes, I deemed it the most elegant and easiest solution to adopt.
+
+The dashboard section follows different principles, starting with the adoption of a colorblind-friendly palette, as there the visual representation is more important for its scope.
 
 # - *EXPOSITION STYLE*
 
@@ -87,9 +89,12 @@ Given its nature, this section is the most conclusive one.
 
 `Extracting Insights` it is what I enjoy the most to do, to interrogate the data frame like it is a culprit to squeeze of valuable information, and then presenting the results to decision makers in a clear and concise manner. It is in my opinion the main activity for a Data Analyst and I fit right into it. Eager to improve my effectiveness and my level of sophistication to be of more value to the firm.
 
-The last section, `Advanced Inquiries`, doesn't differ a lot in spirit from the second one, just the tools are different as they consist of more advanced statistical and algorithmic methods. I have a lot of interest in these as well, given the insights they can provide is vastly superior to basic rows and columns manipulations.   
+The third section, `Advanced Inquiries`, doesn't differ a lot in spirit from the second one, just the tools are different as they consist of more advanced statistical and algorithmic methods. I have a lot of interest in these as well, given the insights they can provide is vastly superior to basic rows and columns manipulations.   
 In this site I offered a small sample of quick expositions of the ones more easily applied to the data frame in exam, but I also have working experience with linear regression and of several classification models.   
-I'm furthermore interested in recommendation engines, A/B testing, operations research and in general in using Data Analysis to investigate logistics & transportation problems.
+I'm furthermore interested in recommendation engines, A/B testing, RFM analysis, operations research and in general in using Data Analysis to investigate logistics & transportation problems.
+
+The newly added `Dashboards` section was develop because many job postings require knowledge of visualization tools like Tableau, Power BI or Looker, and I only have experience of the former, but only as an end user and not as a developer. I could have picked one of the aforementioned softwares and starting to learn its ropes, but I wouldn't know which one to bet on, so I decided to use the R package flexdashboard instead to show my aptitude in creating dashboards.   That is something I never did, as I always presented reports instead, so there's a lot I can do to improve the quality of the output, from getting more acquainted with the R package, to apply visualization theory's principles like the Gestalt's ones, to tinker with the fonts and colors.   
+I had fun in any case and that is something I can see myself doing with ease and participation in a working environment, willing to learn other tools if required as well.
 
 ## - *about myself*
 

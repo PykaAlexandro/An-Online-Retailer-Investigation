@@ -32,3 +32,11 @@ left:
          href: ./Customers_Segmentation.html
        - text: "Understanding Cancellations"
          href: ./Understanding_Cancellations.html
+  - text: "Dashboards"
+    menu:
+       - text: "Data Presentation"
+         href: ./Data_Presentation.html
+       - text: "Insights Presentation"
+         href: ./Insights_Presentation.html 
+       - text: "Inquiries Presentation"
+         href: ./Inquiries_Presentation.html 
