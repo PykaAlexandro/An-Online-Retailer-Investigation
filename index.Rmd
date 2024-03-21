@@ -15,7 +15,7 @@ df <- read_excel(here::here("online_retail_II.xlsx"))
 
 This site was conceived as a way to ease my job search as a `Data Analyst`, both for me to show my skills and the tasks I am more interested to perform and for the recruiters to evaluate my competences and how I reason to assess my fit inside their organization.
 
-I therefore took a data frame from the web and I analyzed it as I would do in a working environment, organizing the site into three different subsequent parts that build on each other, plus a recently added dashboards section that presents some of the findings of the other ones.
+I therefore took a data frame from the web and I analyzed it as I would do in a working environment, organizing the site into three different subsequent parts that build on each other, plus a recently added dashboards section that presents some of the findings of the previous ones.
 
 # - *INTENDED AUDIENCE*
 
@@ -93,7 +93,7 @@ The third section, `Advanced Inquiries`, doesn't differ a lot in spirit from the
 In this site I offered a small sample of quick expositions of the ones more easily applied to the data frame in exam, but I also have working experience with linear regression and of several classification models.   
 I'm furthermore interested in recommendation engines, A/B testing, RFM analysis, operations research and in general in using Data Analysis to investigate logistics & transportation problems.
 
-The newly added `Dashboards` section was develop because many job postings require knowledge of visualization tools like Tableau, Power BI or Looker, and I only have experience of the former, but only as an end user and not as a developer. I could have picked one of the aforementioned softwares and starting to learn its ropes, but I wouldn't know which one to bet on, so I decided to use the R package flexdashboard instead to show my aptitude in creating dashboards.   That is something I never did, as I always presented reports instead, so there's a lot I can do to improve the quality of the output, from getting more acquainted with the R package, to apply visualization theory's principles like the Gestalt's ones, to tinker with the fonts and colors.   
+The newly added `Dashboards` section was develop because many job postings require knowledge of visualization tools like Tableau, Power BI or Looker, and I only have experience of the former, but solely as an end user and not as a developer. I could have picked one of the aforementioned softwares and start to learn its ropes, but I wouldn't know which one to bet on, so I decided to use the R package flexdashboard instead to show my aptitude in creating dashboards.   That is something I never did, as I always presented reports instead, so there's a lot I can do to improve the quality of the output, from getting more acquainted with the R package, to apply visualization theory's principles like the Gestalt's ones, to tinker with the fonts and colors.   
 I had fun in any case and that is something I can see myself doing with ease and participation in a working environment, willing to learn other tools if required as well.
 
 ## - *about myself*
